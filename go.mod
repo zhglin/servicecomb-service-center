@@ -22,7 +22,8 @@ require (
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-chassis/foundation v0.1.1-0.20191113114104-2b05871e9ec4
 	github.com/go-chassis/go-archaius v1.3.2
-	github.com/go-chassis/go-chassis v0.0.0-20200624080301-8af281f0f75b
+	github.com/go-chassis/go-chassis v1.8.3
+	github.com/go-chassis/go-restful-swagger20 v1.0.3-0.20200310030431-17d80f34264f // indirect
 	github.com/go-chassis/paas-lager v1.1.1
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
@@ -72,7 +73,7 @@ require (
 	github.com/wsxiaoys/terminal v0.0.0-20160513160801-0940f3fc43a0 // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
 	go.etcd.io/bbolt v1.3.4 // indirect
-	go.etcd.io/etcd v3.3.22+incompatible
+	go.etcd.io/etcd v3.3.22+incompatible // indirect
 	go.uber.org/zap v1.10.0
 	google.golang.org/grpc v1.19.0
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
