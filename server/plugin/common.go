@@ -22,13 +22,14 @@ import (
 )
 
 const (
-	BUILDIN       = "buildin"
+	BUILDIN       = "buildin"  //默认使用的plugin
 	STATIC        = "static"
 	DYNAMIC       = "dynamic"
 	keyPluginName = "name"
 )
 
 // DynamicPluginFunc should be called in buildin implement
+// 查看是否具有dynamicPlugin 以及对应的 函数
 func DynamicPluginFunc(pn PluginName, funcName string) pg.Symbol {
 	if wi, ok := Plugins().instances[pn]; ok && !wi.dynamic {
 		return nil

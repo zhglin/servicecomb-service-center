@@ -52,7 +52,7 @@ const (
 
 func init() {
 	prepareSelfRegistration()
-
+	//设置共享Environment
 	SetSharedMode()
 }
 
@@ -97,7 +97,7 @@ func AddDefaultContextValue(ctx context.Context) context.Context {
 func IsDefaultDomainProject(domainProject string) bool {
 	return domainProject == REGISTRY_DOMAIN_PROJECT
 }
-
+//读取配置
 func SetSharedMode() {
 	sharedServiceNames = make(map[string]struct{})
 	for _, s := range strings.Split(os.Getenv("CSE_SHARED_SERVICES"), ",") {
@@ -105,13 +105,16 @@ func SetSharedMode() {
 			sharedServiceNames[s] = struct{}{}
 		}
 	}
+	//注册中心节点默认共享 （注册中心的domain，project，appId都为default）
 	sharedServiceNames[Service.ServiceName] = struct{}{}
 }
-
+//服务是否是不分Environment
 func IsShared(key *pb.MicroServiceKey) bool {
+	//domain,project 必须都为 default
 	if !IsDefaultDomainProject(key.Tenant) {
 		return false
 	}
+	//AppId必须==default
 	if key.AppId != REGISTRY_APP_ID {
 		return false
 	}

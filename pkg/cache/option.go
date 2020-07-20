@@ -17,7 +17,9 @@
 package cache
 
 type Option struct {
+	//需要处理的层级
 	Level   int
+	//是否cache
 	NoCache bool
 }
 

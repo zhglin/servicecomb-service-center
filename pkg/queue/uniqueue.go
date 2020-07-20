@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/apache/servicecomb-service-center/pkg/log"
 )
-
+// 去重队列 不管put多少个只会存在一个未消费的item
 type UniQueue struct {
 	queue chan interface{}
 }
@@ -38,8 +38,9 @@ func (uq *UniQueue) Get(ctx context.Context) interface{} {
 func (uq *UniQueue) Chan() <-chan interface{} {
 	return uq.queue
 }
-
+// 加入一个item
 func (uq *UniQueue) Put(value interface{}) (e error) {
+	// 已经close的 再put
 	defer func() {
 		if r := recover(); r != nil {
 			log.LogPanic(r)
@@ -47,7 +48,7 @@ func (uq *UniQueue) Put(value interface{}) (e error) {
 			e = fmt.Errorf("%v", r)
 		}
 	}()
-
+	// 如果chan中已存在 这里会抛弃掉 连续put只保留最后一个
 	select {
 	case _, ok := <-uq.queue:
 		if !ok {
@@ -55,14 +56,14 @@ func (uq *UniQueue) Put(value interface{}) (e error) {
 		}
 	default:
 	}
-
+	// 写入
 	select {
 	case uq.queue <- value:
 	default:
 	}
 	return
 }
-
+// 安全的关闭
 func (uq *UniQueue) Close() {
 	select {
 	case _, ok := <-uq.queue:
@@ -74,6 +75,7 @@ func (uq *UniQueue) Close() {
 	close(uq.queue)
 }
 
+// queue中只允许存在一个
 func NewUniQueue() (uq *UniQueue) {
 	return &UniQueue{
 		queue: make(chan interface{}, 1),

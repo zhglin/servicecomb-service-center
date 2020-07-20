@@ -47,6 +47,7 @@ type BatchFindResult struct {
 }
 
 type BatchFindInstancesRequest struct {
+	//consumer的id
 	ConsumerServiceId string          `protobuf:"bytes,1,opt,name=consumerServiceId" json:"consumerServiceId,omitempty"`
 	Services          []*FindService  `protobuf:"bytes,2,rep,name=services" json:"services,omitempty"`
 	Instances         []*FindInstance `protobuf:"bytes,3,rep,name=instances" json:"instances,omitempty"`

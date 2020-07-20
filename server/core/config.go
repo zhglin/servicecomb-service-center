@@ -56,7 +56,7 @@ func Configure() {
 	setCPUs()
 
 	*ServerInfo = newInfo()
-
+	//设置动态组件目录
 	plugin.SetPluginDir(ServerInfo.Config.PluginsDir)
 
 	initLogger()

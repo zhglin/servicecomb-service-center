@@ -25,10 +25,10 @@ func init() {
 	mgr.RegisterPlugin(mgr.Plugin{mgr.DISCOVERY, "buildin", NewRepository})
 	mgr.RegisterPlugin(mgr.Plugin{mgr.DISCOVERY, "etcd", NewRepository})
 }
-
+// 只是个代理
 type EtcdRepository struct {
 }
-
+// 通过EtcdRepository创建真正的Adaptor
 func (r *EtcdRepository) New(t discovery.Type, cfg *discovery.Config) discovery.Adaptor {
 	return NewEtcdAdaptor(t.String(), cfg)
 }

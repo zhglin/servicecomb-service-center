@@ -25,28 +25,32 @@ import (
 
 type Executor struct {
 	pool       *gopool.Pool
-	tasks      *queue.UniQueue
-	latestTask Task
+	tasks      *queue.UniQueue  //队列
+	latestTask Task //最后一次执行的task实例
 }
 
+// 添加task
 func (s *Executor) AddTask(task Task) (err error) {
 	if task == nil {
 		return errors.New("invalid parameters")
 	}
-
+	// 已经close了的会报错
 	err = s.tasks.Put(task)
 	if err != nil {
 		return
 	}
+	// 如果最后一次的执行有错 返回错误
 	return s.latestTask.Err()
 }
 
 func (s *Executor) Execute() {
 	select {
 	case task, ok := <-s.tasks.Chan():
+		// 已经关闭了
 		if !ok {
 			return
 		}
+		// 执行
 		s.pool.Do(func(ctx context.Context) {
 			at := task.(Task)
 			at.Do(ctx)
@@ -55,7 +59,7 @@ func (s *Executor) Execute() {
 	default:
 	}
 }
-
+// 关闭executor
 func (s *Executor) Close() {
 	s.tasks.Close()
 }
@@ -64,6 +68,6 @@ func NewExecutor(pool *gopool.Pool, task Task) *Executor {
 	return &Executor{
 		pool:       pool,
 		tasks:      queue.NewUniQueue(),
-		latestTask: task,
+		latestTask: task, //最后一次执行的task，里面保留着执行结果
 	}
 }

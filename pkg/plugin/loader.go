@@ -32,18 +32,18 @@ var (
 	once     sync.Once
 	regex, _ = regexp.Compile(`([A-Za-z0-9_.-]+)_plugin.so$`)
 )
-
+// dynamic plugin 信息
 type wrapPlugin struct {
 	p     *plugin.Plugin
-	funcs map[string]plugin.Symbol
+	funcs map[string]plugin.Symbol  //cache的函数信息
 }
-
+//动态组件管理器
 type Loader struct {
 	Dir     string
 	Plugins map[string]*wrapPlugin
 	mux     sync.RWMutex
 }
-
+// 初始化Loader
 func (pm *Loader) Init() {
 	pm.Plugins = make(map[string]*wrapPlugin, 10)
 
@@ -52,7 +52,7 @@ func (pm *Loader) Init() {
 		log.Errorf(err, "no any plugin has been loaded")
 	}
 }
-
+// 从dir中加载全量的plugin
 func (pm *Loader) ReloadPlugins() error {
 	dir := os.ExpandEnv(pm.Dir)
 	if len(dir) == 0 {
@@ -71,13 +71,14 @@ func (pm *Loader) ReloadPlugins() error {
 		if !file.Mode().IsRegular() {
 			continue
 		}
-
+		//是否是plugin的命名规则
 		submatchs := regex.FindStringSubmatch(file.Name())
 		if len(submatchs) < 2 {
 			continue
 		}
 
 		// golang 1.8+ feature
+		// 使用plugin包 打开plugin
 		pluginFileFullPath := filepath.Join(dir, file.Name())
 		p, err := plugin.Open(pluginFileFullPath)
 		if err != nil {
@@ -91,7 +92,7 @@ func (pm *Loader) ReloadPlugins() error {
 	}
 	return nil
 }
-
+// 查看plugin中是否有funcName函数
 func (pm *Loader) Find(pluginName, funcName string) (plugin.Symbol, error) {
 	pm.mux.RLock()
 	w, ok := pm.Plugins[pluginName]
@@ -118,14 +119,14 @@ func (pm *Loader) Find(pluginName, funcName string) (plugin.Symbol, error) {
 	pm.mux.Unlock()
 	return f, nil
 }
-
+//是否是个dynamicPlugin
 func (pm *Loader) Exist(pluginName string) bool {
 	pm.mux.RLock()
 	_, ok := pm.Plugins[pluginName]
 	pm.mux.RUnlock()
 	return ok
 }
-
+// 设置plugin目录
 func SetPluginDir(dir string) {
 	loader.Dir = dir
 }

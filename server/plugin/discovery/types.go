@@ -27,16 +27,16 @@ import (
 )
 
 var (
-	Types     []Type
-	typeNames []string
+	Types     []Type    //已注册的类型
+	typeNames []string  //对应的已注册的类型名称
 )
 
 const (
 	TypeError = Type(-1)
 )
-
+// etcd中数据类型
 type Type int
-
+// 转换成名称字符串
 func (st Type) String() string {
 	if int(st) < 0 {
 		return "TypeError"
@@ -46,13 +46,15 @@ func (st Type) String() string {
 	}
 	return "TYPE" + strconv.Itoa(int(st))
 }
-
+// 注册数据类型
 func RegisterType(name string) (newId Type, err error) {
+	// 已注册
 	for _, n := range Types {
 		if n.String() == name {
 			return TypeError, fmt.Errorf("redeclare store type '%s'", n)
 		}
 	}
+	// name对应的id就是 已注册的类型的长度
 	newId = Type(len(Types))
 	Types = append(Types, newId)
 	typeNames = append(typeNames, name)
@@ -89,12 +91,12 @@ type KvEvent struct {
 	KV       *KeyValue
 	CreateAt simple.Time
 }
-
+// 事件处理函数
 type KvEventFunc func(evt KvEvent)
-
+// 事件处理器
 type KvEventHandler interface {
-	Type() Type
-	OnEvent(evt KvEvent)
+	Type() Type	//数据类型
+	OnEvent(evt KvEvent) //处理函数 类型就是KvEventFunc
 }
 
 func NewKvEvent(action pb.EventType, kv *KeyValue, rev int64) KvEvent {

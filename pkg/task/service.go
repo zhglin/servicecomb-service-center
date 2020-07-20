@@ -26,7 +26,7 @@ var (
 func init() {
 	service = NewTaskService()
 }
-
+// 全局的taskService
 func Service() TaskService {
 	once.Do(service.Run)
 	return service

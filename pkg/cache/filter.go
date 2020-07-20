@@ -19,6 +19,8 @@ package cache
 import "context"
 
 type Filter interface {
+	//每层cache的name
 	Name(ctx context.Context, parent *Node) string
+	//初始化每层的node
 	Init(ctx context.Context, parent *Node) (*Node, error)
 }

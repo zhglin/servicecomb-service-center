@@ -569,7 +569,7 @@ func (s *InstanceService) GetInstances(ctx context.Context, in *pb.GetInstancesR
 		Instances: instances,
 	}, nil
 }
-
+//查找并创建consumer与一个provider的依赖关系
 func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest) (*pb.FindInstancesResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -578,12 +578,14 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 			Response: pb.CreateResponse(scerr.ErrInvalidParams, err.Error()),
 		}, nil
 	}
-
+	//consumer的domainProject
 	domainProject := util.ParseDomainProject(ctx)
-
+	//如果存在consumerService那么provider的Environment使用consumer的Environment
 	service := &pb.MicroService{Environment: in.Environment}
 	if len(in.ConsumerServiceId) > 0 {
+		//consumerServiceId对应的service是否存在判断
 		service, err = serviceUtil.GetService(ctx, domainProject, in.ConsumerServiceId)
+		//系统异常
 		if err != nil {
 			log.Errorf(err, "get consumer failed, consumer[%s] find provider[%s/%s/%s/%s]",
 				in.ConsumerServiceId, in.Environment, in.AppId, in.ServiceName, in.VersionRule)
@@ -591,6 +593,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 				Response: pb.CreateResponse(scerr.ErrInternal, err.Error()),
 			}, err
 		}
+		//不存在
 		if service == nil {
 			log.Errorf(nil, "consumer does not exist, consumer[%s] find provider[%s/%s/%s/%s]",
 				in.ConsumerServiceId, in.Environment, in.AppId, in.ServiceName, in.VersionRule)
@@ -612,6 +615,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 	}
 	if apt.IsShared(provider) {
 		// it means the shared micro-services must be the same env with SC.
+		//如果是共享的service Environment必须与此注册中心节点的Environment相同
 		provider.Environment = apt.Service.Environment
 
 		findFlag = func() string {
@@ -683,7 +687,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 		Instances: instances,
 	}, nil
 }
-
+//批量查询consumer依赖的provider信息
 func (s *InstanceService) BatchFind(ctx context.Context, in *pb.BatchFindInstancesRequest) (*pb.BatchFindInstancesResponse, error) {
 	if len(in.Services) == 0 && len(in.Instances) == 0 {
 		err := errors.New("Required services or instances")
@@ -724,6 +728,7 @@ func (s *InstanceService) BatchFind(ctx context.Context, in *pb.BatchFindInstanc
 	return response, nil
 }
 
+//批量查询provider
 func (s *InstanceService) batchFindServices(ctx context.Context, in *pb.BatchFindInstancesRequest) (*pb.BatchFindResult, error) {
 	if len(in.Services) == 0 {
 		return nil, nil

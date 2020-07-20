@@ -19,25 +19,25 @@ package backend
 import (
 	"github.com/apache/servicecomb-service-center/server/plugin/discovery"
 )
-
+//addOn 插件接口
 type AddOn interface {
 	Name() string
 	Config() *discovery.Config
 }
-
+//插件实例
 type addOn struct {
-	name string
-	cfg  *discovery.Config
+	name string	//名称
+	cfg  *discovery.Config //配置
 }
-
+//获取名称
 func (e *addOn) Name() string {
 	return e.name
 }
-
+//获取配置
 func (e *addOn) Config() *discovery.Config {
 	return e.cfg
 }
-
+//创建AddOn
 func NewAddOn(name string, cfg *discovery.Config) AddOn {
 	return &addOn{
 		name: name,

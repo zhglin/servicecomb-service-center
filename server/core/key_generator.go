@@ -20,7 +20,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/util"
 	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 )
-
+// 存放etcd中的具体路径
 const (
 	SPLIT                       = "/"
 	REGISTRY_ROOT_KEY           = "cse-sr"

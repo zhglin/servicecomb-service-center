@@ -26,7 +26,7 @@ import (
 	"github.com/apache/servicecomb-service-center/server/plugin/uuid"
 	"github.com/go-chassis/foundation/security"
 )
-
+//支持的plugin
 const (
 	UUID PluginName = iota
 	AUDIT_LOG
@@ -51,10 +51,11 @@ var pluginNames = map[PluginName]string{
 	DISCOVERY: "discovery",
 	TLS:       "ssl",
 }
-
+//发现组件
 func (pm *PluginManager) Discovery() discovery.AdaptorRepository {
 	return pm.Instance(DISCOVERY).(discovery.AdaptorRepository)
 }
+//注册组件
 func (pm *PluginManager) Registry() registry.Registry {
 	return pm.Instance(REGISTRY).(registry.Registry)
 }

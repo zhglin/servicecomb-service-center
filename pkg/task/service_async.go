@@ -36,18 +36,19 @@ const (
 )
 
 type executorWithTTL struct {
-	*Executor
-	TTL int64
+	*Executor	//执行器
+	TTL int64  //执行周期次数 每removeExecutorInterval时间间隔-1
 }
-
+// 异步任务的Executor管理器 add一次执行一次
 type AsyncTaskService struct {
+	//每个任务的executor 以task的key标识
 	executors map[string]*executorWithTTL
 	goroutine *gopool.Pool
 	lock      sync.RWMutex
 	ready     chan struct{}
 	isClose   bool
 }
-
+// 获取 || 创建 任务执行器
 func (lat *AsyncTaskService) getOrNewExecutor(task Task) (s *Executor, isNew bool) {
 	var (
 		ok  bool
@@ -61,6 +62,7 @@ func (lat *AsyncTaskService) getOrNewExecutor(task Task) (s *Executor, isNew boo
 		lat.lock.Lock()
 		se, ok = lat.executors[key]
 		if !ok {
+			//创建执行器
 			isNew = true
 			se = &executorWithTTL{
 				Executor: NewExecutor(lat.goroutine, task),
@@ -74,26 +76,29 @@ func (lat *AsyncTaskService) getOrNewExecutor(task Task) (s *Executor, isNew boo
 	return se.Executor, isNew
 }
 
+//添加任务
 func (lat *AsyncTaskService) Add(ctx context.Context, task Task) error {
 	if task == nil || ctx == nil {
 		return errors.New("invalid parameters")
 	}
-
+	// 获取执行器
 	s, isNew := lat.getOrNewExecutor(task)
+	// 如果是首次添加就直接执行
 	if isNew {
 		// do immediately at first time
 		return task.Do(ctx)
 	}
+	// 非首次的添加到executor中 延迟执行
 	return s.AddTask(task)
 }
-
+// 删除任务
 func (lat *AsyncTaskService) removeExecutor(key string) {
 	if s, ok := lat.executors[key]; ok {
 		s.Close()
 		delete(lat.executors, key)
 	}
 }
-
+// key对应的最后一次执行的task
 func (lat *AsyncTaskService) LatestHandled(key string) (Task, error) {
 	lat.lock.RLock()
 	s, ok := lat.executors[key]
@@ -107,7 +112,9 @@ func (lat *AsyncTaskService) LatestHandled(key string) (Task, error) {
 func (lat *AsyncTaskService) daemon(ctx context.Context) {
 	util.SafeCloseChan(lat.ready)
 	ticker := time.NewTicker(removeExecutorInterval)
+	// lat.executors的最大长度 只加不减
 	max := 0
+	//执行间隔时间
 	timer := time.NewTimer(executeInterval)
 	defer timer.Stop()
 	for {
@@ -115,7 +122,8 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 		case <-ctx.Done():
 			log.Debugf("daemon thread exited for AsyncTaskService stopped")
 			return
-		case <-timer.C:
+		case <-timer.C:  //定时执行
+			// 加锁读出来所有任务 然后依次执行
 			lat.lock.RLock()
 			l := len(lat.executors)
 			slice := make([]*executorWithTTL, 0, l)
@@ -129,7 +137,7 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 			}
 
 			timer.Reset(executeInterval)
-		case <-ticker.C:
+		case <-ticker.C:	//定时清理
 			util.ResetTimer(timer, executeInterval)
 
 			lat.lock.RLock()
@@ -139,6 +147,7 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 			}
 
 			removes := make([]string, 0, l)
+			// 找出来需要清理的executors
 			for key, se := range lat.executors {
 				if atomic.AddInt64(&se.TTL, -1) == 0 {
 					removes = append(removes, key)
@@ -156,6 +165,7 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 			}
 
 			l = len(lat.executors)
+			// 是否需要缩小lat.executor
 			if max > initExecutorCount && max > l*compactTimes {
 				lat.renew()
 				max = l
@@ -166,7 +176,7 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 		}
 	}
 }
-
+// 执行taskService
 func (lat *AsyncTaskService) Run() {
 	lat.lock.Lock()
 	if !lat.isClose {
@@ -175,9 +185,10 @@ func (lat *AsyncTaskService) Run() {
 	}
 	lat.isClose = false
 	lat.lock.Unlock()
+	// 主要执行lat.daemon
 	lat.goroutine.Do(lat.daemon)
 }
-
+// 关闭taskService  stop之后可以run
 func (lat *AsyncTaskService) Stop() {
 	lat.lock.Lock()
 	if lat.isClose {
@@ -185,7 +196,7 @@ func (lat *AsyncTaskService) Stop() {
 		return
 	}
 	lat.isClose = true
-
+	//删除所有executors
 	for key := range lat.executors {
 		lat.removeExecutor(key)
 	}
@@ -196,11 +207,11 @@ func (lat *AsyncTaskService) Stop() {
 
 	util.SafeCloseChan(lat.ready)
 }
-
+// 是否准备好
 func (lat *AsyncTaskService) Ready() <-chan struct{} {
 	return lat.ready
 }
-
+// 重置lat.executors  map缩容
 func (lat *AsyncTaskService) renew() {
 	newExecutor := make(map[string]*executorWithTTL)
 	for k, e := range lat.executors {
@@ -208,7 +219,7 @@ func (lat *AsyncTaskService) renew() {
 	}
 	lat.executors = newExecutor
 }
-
+// 创建taskService
 func NewTaskService() TaskService {
 	lat := &AsyncTaskService{
 		goroutine: gopool.New(context.Background()),

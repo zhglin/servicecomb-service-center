@@ -21,15 +21,21 @@ import (
 	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 	"time"
 )
-
+//addOn配置
 type Config struct {
 	// Key is the prefix to unique specify resource type
+	// key前缀
 	Key          string
+	// 初始化cache大小
 	InitSize     int
+	// 全量从etcd拉取数据时 etcd链接超时时间
 	Timeout      time.Duration
 	Period       time.Duration
+	// 事件处理函数
 	DeferHandler DeferHandler
+	// 事件处理链
 	OnEvent      KvEventFunc
+	// 从etcd获取的数据进行解析的函数
 	Parser       pb.Parser
 }
 
@@ -62,12 +68,12 @@ func (cfg *Config) WithDeferHandler(h DeferHandler) *Config {
 	cfg.DeferHandler = h
 	return cfg
 }
-
+// 设置一个处理器 没啥用 AppendEventFunc支持此功能
 func (cfg *Config) WithEventFunc(f KvEventFunc) *Config {
 	cfg.OnEvent = f
 	return cfg
 }
-
+// 把事件处理函数组装成处理链
 func (cfg *Config) AppendEventFunc(f KvEventFunc) *Config {
 	if prev := cfg.OnEvent; prev != nil {
 		next := f

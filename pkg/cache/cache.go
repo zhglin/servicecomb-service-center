@@ -21,17 +21,20 @@ import (
 	"sync"
 )
 
+//管理缓存value
 type Cache struct {
 	data context.Context
 	lock sync.RWMutex
 }
 
+//设置key value
 func (c *Cache) Set(k string, v interface{}) {
 	c.lock.Lock()
 	c.data = context.WithValue(c.data, k, v)
 	c.lock.Unlock()
 }
 
+//获取value
 func (c *Cache) Get(k string) (v interface{}) {
 	c.lock.RLock()
 	v = c.data.Value(k)

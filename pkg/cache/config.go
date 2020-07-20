@@ -18,9 +18,10 @@ package cache
 
 import "time"
 
+//cache的配置
 type Config struct {
-	ttl time.Duration
-	max int64
+	ttl time.Duration  	//过期时间
+	max int64			//最大数目
 }
 
 func (c *Config) TTL() time.Duration {

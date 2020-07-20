@@ -30,7 +30,8 @@ const (
 	selfPreservationMaxTTL     = 10 * 60 // 10min
 	selfPreservationInitCount  = 5
 )
-
+// discovery 管理的数据类型
+// 要先加载discovery 初始化好各个类型供其他子系统设置EventHandler
 var (
 	DOMAIN           discovery.Type
 	PROJECT          discovery.Type
@@ -47,7 +48,22 @@ var (
 	INSTANCE         discovery.Type
 	LEASE            discovery.Type
 )
-
+/*
+Service                   /cse-sr/ms/files/domin/project/serviceId  => date {pb.MicroService}
+ServiceIndex              /cse-sr/ms/indexes/domin/project/environment/appId/serviceName/version => serviceId
+ServiceAlias              /cse-sr/ms/alias/domin/project/environment/appId/alias/version       => serviceId
+ServiceTag                /cse-sr/ms/tags/domin/project/serviceId => date {map}
+Rule                      /cse-sr/ms/rules/domin/project/serviceId/ruleId  => data {pb.ServiceRule}
+RuleIndex                 /cse-sr/ms/rule-indexes/domin/project/serciveId/Attribute/Pattern  => ruleId
+SchemaSummary
+Instance                  /cse-sr/inst/files/domin/project/serviceId/instanceId => date {MicroServiceInstance} //etcd设置ttl
+Lease                     /cse-sr/inst/leases/domin/project/serviceId/instanceId  => leaseId  //etcd设置ttl
+Schema
+DependencyRule            /cse-sr/ms/dep-rules/domin/project/serviceType(c,p)/environment/AppId/ServiceName/Version
+DependencyQueue           /cse-sr/ms/dep-queue/domin/project/consumerId(serviceId)/id(provider.AppId_provider.ServiceName)   //ConsumerDependency
+Domain                    /cse-sr/domains/domin  => ''
+Project                   /cse-sr/projects/domin/project => ''
+*/
 func registerInnerTypes() {
 	SERVICE = Store().MustInstall(NewAddOn("SERVICE",
 		discovery.Configure().WithPrefix(core.GetServiceRootKey("")).

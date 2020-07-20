@@ -71,7 +71,7 @@ type ServerConfig struct {
 	ServiceClearInterval time.Duration `json:"serviceClearInterval"`
 	//if a service's existence time reaches this value, it can be cleared
 	ServiceTTL time.Duration `json:"serviceTTL"`
-	//CacheTTL is the ttl of cache
+	//CacheTTL is the ttl of cache discovery缓存清理间隔，未设置就永远不清理
 	CacheTTL time.Duration `json:"cacheTTL"`
 }
 

@@ -19,15 +19,20 @@ package discovery
 // Adaptor is used to do service discovery.
 // To improve the performance, Adaptor may use cache firstly in
 // service discovery.
+// Adaptor统一接口
 type Adaptor interface {
+	// 执行相关接口
 	Runnable
 	// Indexer is used to search data from the registry.
+	// 搜索相关接口
 	Indexer
 	// Cacher is used to manage the registry's cache.
+	// cacher相关接口
 	Cacher
 }
 
 // AdaptorRepository creates Adaptors
+// 统一的adaptor创建接口
 type AdaptorRepository interface {
 	// New news an instance of specify Type adaptor
 	New(t Type, cfg *Config) Adaptor

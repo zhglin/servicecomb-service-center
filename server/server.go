@@ -51,6 +51,7 @@ func Run() {
 type ServiceCenterServer struct {
 	apiService    *APIServer
 	notifyService *nf.NotifyService
+	//discovery管理器
 	cacheService  *backend.KvStore
 	goroutine     *gopool.Pool
 }
@@ -192,6 +193,7 @@ func (s *ServiceCenterServer) startServices() {
 	}
 
 	// cache mechanism
+	// 启动discovery管理器
 	s.cacheService.Run()
 	<-s.cacheService.Ready()
 

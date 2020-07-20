@@ -23,7 +23,7 @@ import (
 
 type ConsumerFilter struct {
 }
-
+//Consumer的id
 func (f *ConsumerFilter) Name(ctx context.Context, _ *cache.Node) string {
 	return ctx.Value(CTX_FIND_CONSUMER).(string)
 }

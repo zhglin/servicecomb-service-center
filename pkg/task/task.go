@@ -17,13 +17,13 @@
 package task
 
 import "context"
-
+// task接口
 type Task interface {
-	Key() string
-	Do(ctx context.Context) error
+	Key() string  // task标识
+	Do(ctx context.Context) error // 执行
 	Err() error
 }
-
+// taskService接口
 type TaskService interface {
 	Add(ctx context.Context, task Task) error
 	LatestHandled(key string) (Task, error)
