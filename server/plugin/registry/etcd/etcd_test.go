@@ -17,7 +17,7 @@
 package etcd
 
 import (
-	_ "github.com/apache/servicecomb-service-center/server/plugin/tracing/buildin"
+	_ "github.com/apache/servicecomb-service-center/server/plugin/tracing/pzipkin"
 	"github.com/stretchr/testify/assert"
 )
 import _ "github.com/apache/servicecomb-service-center/server/plugin/security/buildin"
@@ -25,22 +25,18 @@ import _ "github.com/apache/servicecomb-service-center/server/plugin/tls/buildin
 import (
 	context2 "context"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/apache/servicecomb-service-center/server/core"
 	"github.com/apache/servicecomb-service-center/server/plugin/registry"
-	"github.com/apache/servicecomb-service-center/server/rpc"
 
 	"context"
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/coreos/etcd/mvcc/mvccpb"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -115,7 +111,7 @@ func TestEtcdClient(t *testing.T) {
 	registry.Configuration().ClusterAddresses = endpoint
 	registry.Configuration().InitClusterInfo()
 
-	etcdc := &EtcdClient{
+	etcdc := &Client{
 		Endpoints:   []string{endpoint},
 		DialTimeout: dialTimeout,
 	}
@@ -146,7 +142,7 @@ func TestEtcdClient(t *testing.T) {
 		t.Fatalf("TestEtcdClient failed, %#v", err)
 	}
 	select {
-	case <-inst.(*EtcdClient).Err():
+	case <-inst.(*Client).Err():
 	default:
 		t.Fatalf("TestEtcdClient failed, %#v", err)
 	}
@@ -361,7 +357,7 @@ func TestEtcdClient(t *testing.T) {
 
 	// large data
 	var wg sync.WaitGroup
-	for i := 0; i < registry.DEFAULT_PAGE_COUNT+1; i++ {
+	for i := 0; i < registry.DefaultPageCount+1; i++ {
 		wg.Add(1)
 		v := strconv.Itoa(i)
 		go func() {
@@ -377,14 +373,14 @@ func TestEtcdClient(t *testing.T) {
 	resp, err = etcdc.Do(context.Background(), registry.GET,
 		registry.WithStrKey("/test_page/"),
 		registry.WithStrEndKey("/test_page/9999"))
-	if err != nil || !resp.Succeeded || resp.Count != registry.DEFAULT_PAGE_COUNT+1 ||
-		len(resp.Kvs) != registry.DEFAULT_PAGE_COUNT+1 {
+	if err != nil || !resp.Succeeded || resp.Count != registry.DefaultPageCount+1 ||
+		len(resp.Kvs) != registry.DefaultPageCount+1 {
 		t.Fatalf("TestEtcdClient_Do failed, %#v", err)
 	}
 	resp, err = etcdc.Do(context.Background(), registry.GET,
 		registry.WithStrKey("/test_page/"), registry.WithPrefix(), registry.WithDescendOrder())
-	if err != nil || !resp.Succeeded || resp.Count != registry.DEFAULT_PAGE_COUNT+1 ||
-		len(resp.Kvs) != registry.DEFAULT_PAGE_COUNT+1 ||
+	if err != nil || !resp.Succeeded || resp.Count != registry.DefaultPageCount+1 ||
+		len(resp.Kvs) != registry.DefaultPageCount+1 ||
 		string(resp.Kvs[0].Key) != "/test_page/999" {
 		t.Fatalf("TestEtcdClient_Do failed, %#v", err)
 	}
@@ -403,7 +399,7 @@ func TestEtcdClient(t *testing.T) {
 }
 
 func TestEtcdClient_Compact(t *testing.T) {
-	etcd := &EtcdClient{
+	etcd := &Client{
 		Endpoints:   []string{endpoint},
 		DialTimeout: dialTimeout,
 	}
@@ -424,7 +420,7 @@ func TestEtcdClient_Compact(t *testing.T) {
 }
 
 func TestEtcdClient_Txn(t *testing.T) {
-	etcd := &EtcdClient{
+	etcd := &Client{
 		Endpoints:   []string{endpoint},
 		DialTimeout: dialTimeout,
 	}
@@ -465,7 +461,7 @@ func TestEtcdClient_Txn(t *testing.T) {
 		{Action: registry.Put, Key: []byte("/test_txn/a"), Value: []byte("a")},
 		{Action: registry.Put, Key: []byte("/test_txn/b"), Value: []byte("b")},
 	}, []registry.CompareOp{
-		{[]byte("/test_txn/a"), registry.CMP_VALUE, registry.CMP_EQUAL, "a"},
+		{[]byte("/test_txn/a"), registry.CmpValue, registry.CmpEqual, "a"},
 	}, []registry.PluginOp{
 		{Action: registry.Put, Key: []byte("/test_txn/c"), Value: []byte("c")},
 		{Action: registry.Put, Key: []byte("/test_txn/d"), Value: []byte("d")},
@@ -476,7 +472,7 @@ func TestEtcdClient_Txn(t *testing.T) {
 
 	// case: range request
 	resp, err = etcd.TxnWithCmp(context.Background(), nil, []registry.CompareOp{
-		{[]byte("/test_txn/c"), registry.CMP_VALUE, registry.CMP_EQUAL, "c"},
+		{[]byte("/test_txn/c"), registry.CmpValue, registry.CmpEqual, "c"},
 	}, []registry.PluginOp{
 		{Action: registry.Get, Key: []byte("/test_txn/a")},
 		{Action: registry.Get, Key: []byte("/test_txn/"), Prefix: true},
@@ -490,7 +486,7 @@ func TestEtcdClient_Txn(t *testing.T) {
 		{Action: registry.Put, Key: []byte("/test_txn/a"), Value: []byte("a")},
 		{Action: registry.Put, Key: []byte("/test_txn/b"), Value: []byte("b")},
 	}, []registry.CompareOp{
-		{[]byte("/test_txn/c"), registry.CMP_VALUE, registry.CMP_EQUAL, "c"},
+		{[]byte("/test_txn/c"), registry.CmpValue, registry.CmpEqual, "c"},
 	}, []registry.PluginOp{
 		{Action: registry.Delete, Key: []byte("/test_txn/"), Prefix: true},
 	})
@@ -506,7 +502,7 @@ func TestEtcdClient_Txn(t *testing.T) {
 }
 
 func TestEtcdClient_LeaseRenew(t *testing.T) {
-	etcd := &EtcdClient{
+	etcd := &Client{
 		Endpoints:   []string{endpoint},
 		DialTimeout: dialTimeout,
 	}
@@ -543,7 +539,7 @@ func TestEtcdClient_LeaseRenew(t *testing.T) {
 }
 
 func TestEtcdClient_HealthCheck(t *testing.T) {
-	etcdc := &EtcdClient{
+	etcdc := &Client{
 		Endpoints:        []string{endpoint},
 		DialTimeout:      dialTimeout,
 		AutoSyncInterval: time.Millisecond,
@@ -587,7 +583,7 @@ func TestEtcdClient_HealthCheck(t *testing.T) {
 }
 
 func TestEtcdClient_Watch(t *testing.T) {
-	etcd := &EtcdClient{
+	etcd := &Client{
 		Endpoints:   []string{endpoint},
 		DialTimeout: dialTimeout,
 	}
@@ -823,7 +819,7 @@ func TestEtcdClient_paging(t *testing.T) {
 		// meaning data decreases during paging
 		rangeResp2: generateGetResp(0, 0),
 	}
-	c := EtcdClient{
+	c := Client{
 		Client: &clientv3.Client{
 			KV: mockKv,
 		},
@@ -831,7 +827,7 @@ func TestEtcdClient_paging(t *testing.T) {
 
 	op := registry.PluginOp{
 		Offset: -1,
-		Limit:  registry.DEFAULT_PAGE_COUNT,
+		Limit:  registry.DefaultPageCount,
 	}
 	r, err := c.paging(context2.Background(), op)
 	if err != nil {
@@ -843,7 +839,7 @@ func TestEtcdClient_paging(t *testing.T) {
 }
 
 func TestNewRegistry(t *testing.T) {
-	etcd := &EtcdClient{
+	etcd := &Client{
 		Endpoints:        []string{endpoint, "0.0.0.0:2379"},
 		DialTimeout:      dialTimeout,
 		AutoSyncInterval: time.Millisecond,
@@ -853,36 +849,4 @@ func TestNewRegistry(t *testing.T) {
 		// should be err, member list does not contain one of the endpoints.
 		t.Fatalf("TestEtcdClient failed, %#v", err)
 	}
-}
-
-func TestWithTLS(t *testing.T) {
-	sslRoot := "../../../../examples/service_center/ssl/"
-	os.Setenv("SSL_ROOT", sslRoot)
-
-	core.ServerInfo.Config.SslEnabled = true
-	registry.Configuration().SslEnabled = true
-	defer func() {
-		core.ServerInfo.Config.SslEnabled = false
-		registry.Configuration().SslEnabled = false
-		os.Setenv("SSL_ROOT", "")
-	}()
-
-	svr, err := rpc.NewServer("127.0.0.1:0")
-	go func() {
-		svr.Serve()
-	}()
-	defer svr.Stop()
-
-	etcd := &EtcdClient{
-		DialTimeout: dialTimeout,
-		Endpoints:   []string{svr.Listener.Addr().String()},
-	}
-
-	err = etcd.Initialize()
-	// initialize the etcd client will check member list firstly,
-	// so will raise an grpc error but not TLS errors.
-	if _, ok := status.FromError(err); !ok {
-		t.Fatalf("TestEtcdClient failed, %#v", err)
-	}
-	defer etcd.Close()
 }

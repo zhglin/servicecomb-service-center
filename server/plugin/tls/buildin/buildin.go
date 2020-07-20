@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package buildin
 
 import (
@@ -22,10 +23,10 @@ import (
 )
 
 func init() {
-	mgr.RegisterPlugin(mgr.Plugin{mgr.TLS, "buildin", New})
+	mgr.RegisterPlugin(mgr.Plugin{PName: mgr.TLS, Name: "buildin", New: New})
 }
 
-func New() mgr.PluginInstance {
+func New() mgr.Instance {
 	return &DefaultTLS{}
 }
 

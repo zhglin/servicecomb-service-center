@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package plugin
 
 import (
@@ -26,43 +27,44 @@ import (
 	"github.com/astaxie/beego"
 )
 
-var pluginMgr = &PluginManager{}
 //初始化plugin管理器
+var pluginMgr = &Manager{}
+
 func init() {
 	pluginMgr.Initialize()
 }
 //plugin实例
 type wrapInstance struct {
 	dynamic  bool
-	instance PluginInstance
+	instance Instance
 	lock     sync.RWMutex
 }
 
-// PluginManager manages plugin instance generation.
-// PluginManager keeps the plugin instance currently used by server
+// Manager manages plugin instance generation.
+// Manager keeps the plugin instance currently used by server
 // for every plugin interface.
 //plugin管理器
-type PluginManager struct {
+type Manager struct {
 	//plugin配置 PluginName plugin名字 PluginImplName plugin子名称 一个plugin可以有多个实现
-	plugins   map[PluginName]map[PluginImplName]*Plugin
+	plugins   map[Name]map[ImplName]*Plugin
 	//plugin实例
-	instances map[PluginName]*wrapInstance
+	instances map[Name]*wrapInstance
 }
 
 // Initialize initializes the struct
 // 初始化plugin管理器
-func (pm *PluginManager) Initialize() {
-	pm.plugins = make(map[PluginName]map[PluginImplName]*Plugin, int(typeEnd))
-	pm.instances = make(map[PluginName]*wrapInstance, int(typeEnd))
+func (pm *Manager) Initialize() {
+	pm.plugins = make(map[Name]map[ImplName]*Plugin, int(typeEnd))
+	pm.instances = make(map[Name]*wrapInstance, int(typeEnd))
 	//初始化每个plugin的实例
-	for t := PluginName(0); t != typeEnd; t++ {
+	for t := Name(0); t != typeEnd; t++ {
 		pm.instances[t] = &wrapInstance{}
 	}
 }
 
 // ReloadAll reloads all the plugin instances
 // 重置所有的plugin实例
-func (pm *PluginManager) ReloadAll() {
+func (pm *Manager) ReloadAll() {
 	for pn := range pm.instances {
 		pm.Reload(pn)
 	}
@@ -71,10 +73,10 @@ func (pm *PluginManager) ReloadAll() {
 // Register registers a 'Plugin'
 // unsafe
 // 向plugin管理器注册插件
-func (pm *PluginManager) Register(p Plugin) {
+func (pm *Manager) Register(p Plugin) {
 	m, ok := pm.plugins[p.PName]
 	if !ok {
-		m = make(map[PluginImplName]*Plugin, 5)
+		m = make(map[ImplName]*Plugin, 5)
 	}
 	m[p.Name] = &p
 	pm.plugins[p.PName] = m
@@ -83,7 +85,7 @@ func (pm *PluginManager) Register(p Plugin) {
 
 // Get gets a 'Plugin'
 // 获plugin信息
-func (pm *PluginManager) Get(pn PluginName, name PluginImplName) *Plugin {
+func (pm *Manager) Get(pn Name, name ImplName) *Plugin {
 	m, ok := pm.plugins[pn]
 	if !ok {
 		return nil
@@ -95,17 +97,17 @@ func (pm *PluginManager) Get(pn PluginName, name PluginImplName) *Plugin {
 // What plugin instance you get is depended on the supplied go plugin files
 // (high priority) or the plugin config(low priority)
 //
-// The go plugin file should be {plugins_dir}/{PluginName}_plugin.so.
+// The go plugin file should be {plugins_dir}/{Name}_plugin.so.
 // ('plugins_dir' must be configured as a valid path in service-center config.)
 // The plugin config in service-center config should be:
-// {PluginName}_plugin = {PluginImplName}
+// {Name}_plugin = {ImplName}
 //
 // e.g. For registry plugin, you can set a config in app.conf:
 // plugins_dir = /home, and supply a go plugin file: /home/registry_plugin.so;
 // or if you want to use etcd as registry, you can set a config in app.conf:
 // registry_plugin = etcd.
 // 获取组件实例 不存在就创建
-func (pm *PluginManager) Instance(pn PluginName) PluginInstance {
+func (pm *Manager) Instance(pn Name) Instance {
 	wi := pm.instances[pn]
 	wi.lock.RLock()
 	if wi.instance != nil {
@@ -130,10 +132,10 @@ func (pm *PluginManager) Instance(pn PluginName) PluginInstance {
 // but not returns it.
 // Use 'Instance' if you want to get the plugin instance.
 // We suggest you to use 'Instance' instead of 'New'.
-func (pm *PluginManager) New(pn PluginName) {
+func (pm *Manager) New(pn Name) {
 	var (
-		title = STATIC  //非动态组件
-		f     func() PluginInstance
+		title = STATIC //非动态组件
+		f     func() Instance
 	)
 
 	wi := pm.instances[pn]
@@ -151,7 +153,7 @@ func (pm *PluginManager) New(pn PluginName) {
 		}
 		//根据plugin配置生成对应的组件实例
 		name := beego.AppConfig.DefaultString(pn.String()+"_plugin", BUILDIN)
-		p, ok = m[PluginImplName(name)]
+		p, ok = m[ImplName(name)]
 		if !ok {
 			return
 		}
@@ -168,7 +170,7 @@ func (pm *PluginManager) New(pn PluginName) {
 
 // Reload reloads the instance of the specified plugin interface.
 // 重置plugin实例
-func (pm *PluginManager) Reload(pn PluginName) {
+func (pm *Manager) Reload(pn Name) {
 	wi := pm.instances[pn]
 	wi.lock.Lock()
 	wi.instance = nil
@@ -176,14 +178,15 @@ func (pm *PluginManager) Reload(pn PluginName) {
 	pn.ClearConfigs()
 	wi.lock.Unlock()
 }
+
 //是否是动态组件
-func (pm *PluginManager) existDynamicPlugin(pn PluginName) *Plugin {
+func (pm *Manager) existDynamicPlugin(pn Name) *Plugin {
 	m, ok := pm.plugins[pn]
 	if !ok {
 		return nil
 	}
 	// 'buildin' implement of all plugins should call DynamicPluginFunc()
-	if plugin.PluginLoader().Exist(pn.String()) {
+	if plugin.GetLoader().Exist(pn.String()) {
 		return m[BUILDIN]
 	}
 	return nil
@@ -191,7 +194,7 @@ func (pm *PluginManager) existDynamicPlugin(pn PluginName) *Plugin {
 
 // Plugins returns the 'PluginManager'.
 // 返回plugin管理器
-func Plugins() *PluginManager {
+func Plugins() *Manager {
 	return pluginMgr
 }
 
@@ -204,7 +207,7 @@ func RegisterPlugin(p Plugin) {
 // LoadPlugins loads and sets all the plugin interfaces's instance.
 // 创建所有已注册的plugin
 func LoadPlugins() {
-	for t := PluginName(0); t != typeEnd; t++ {
+	for t := Name(0); t != typeEnd; t++ {
 		Plugins().Instance(t)
 	}
 }

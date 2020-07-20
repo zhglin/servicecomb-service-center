@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/server/service/cipher"
+	"github.com/apache/servicecomb-service-center/pkg/rbacframe"
 	"github.com/apache/servicecomb-service-center/server/service/rbac/dao"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-chassis/go-chassis/security/authr"
@@ -30,14 +30,8 @@ import (
 
 var ErrUnauthorized = errors.New("wrong user name or password")
 
-const (
-	ClaimsUser = "account"
-	ClaimsRole = "role"
-)
-
 //EmbeddedAuthenticator is sc default auth plugin, RBAC data is persisted in etcd
 type EmbeddedAuthenticator struct {
-	secret []byte
 }
 
 func newEmbeddedAuthenticator(opts *authr.Options) (authr.Authenticator, error) {
@@ -45,29 +39,36 @@ func newEmbeddedAuthenticator(opts *authr.Options) (authr.Authenticator, error) 
 }
 
 //Login check db user and password,will verify and return token for valid account
-func (a *EmbeddedAuthenticator) Login(ctx context.Context, user string, password string) (string, error) {
-	if user == "default" {
+func (a *EmbeddedAuthenticator) Login(ctx context.Context, user string, password string, opts ...authr.LoginOption) (string, error) {
+	opt := &authr.LoginOptions{}
+	for _, o := range opts {
+		o(opt)
+	}
+	exist, err := dao.AccountExist(ctx, user)
+	if err != nil {
+		log.Error("check account err", err)
+		return "", err
+	}
+	if !exist {
 		return "", ErrUnauthorized
 	}
 	account, err := dao.GetAccount(ctx, user)
 	if err != nil {
+		log.Error("get account err", err)
 		return "", err
 	}
-	account.Password, err = cipher.Decrypt(account.Password)
-	if err != nil {
-		return "", err
-	}
-	if user == account.Name && password == account.Password {
+	same := SamePassword(account.Password, password)
+	if user == account.Name && same {
 		secret, err := GetPrivateKey()
 		if err != nil {
 			return "", err
 		}
 		tokenStr, err := token.Sign(map[string]interface{}{
-			ClaimsUser: user,
-			ClaimsRole: account.Role, //TODO more claims for RBAC, for example rule config
+			rbacframe.ClaimsUser: user,
+			rbacframe.ClaimsRole: account.Role,
 		},
 			secret,
-			token.WithExpTime("30m"),
+			token.WithExpTime(opt.ExpireAfter),
 			token.WithSigningMethod(token.RS512)) //TODO config for each user
 		if err != nil {
 			log.Errorf(err, "can not sign a token")
@@ -78,20 +79,14 @@ func (a *EmbeddedAuthenticator) Login(ctx context.Context, user string, password
 	return "", ErrUnauthorized
 }
 func (a *EmbeddedAuthenticator) Authenticate(ctx context.Context, tokenStr string) (interface{}, error) {
-	claims, err := token.Verify(tokenStr, func(claims interface{}, method token.SigningMethod) (interface{}, error) {
-		p, err := jwt.ParseRSAPublicKeyFromPEM([]byte(PublicKey()))
-		if err != nil {
-			log.Error("can not parse public key", err)
-			return nil, err
-		}
-		return p, nil
-	})
+	p, err := jwt.ParseRSAPublicKeyFromPEM([]byte(PublicKey()))
 	if err != nil {
-		log.Error("verify token failed", err)
+		log.Error("can not parse public key", err)
 		return nil, err
 	}
-	return claims, nil
+	return rbacframe.Authenticate(tokenStr, p)
 }
+
 func init() {
 	authr.Install("default", newEmbeddedAuthenticator)
 }

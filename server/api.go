@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package server
 
 import (
@@ -26,7 +27,6 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core"
 	"github.com/apache/servicecomb-service-center/server/core/backend"
 	rs "github.com/apache/servicecomb-service-center/server/rest"
-	"github.com/apache/servicecomb-service-center/server/rpc"
 	"github.com/apache/servicecomb-service-center/server/service"
 	"net"
 	"strconv"
@@ -65,7 +65,6 @@ type APIServer struct {
 	Listeners map[APIType]string
 
 	restSrv   *rest.Server
-	rpcSrv    *rpc.Server
 	isClose   bool
 	forked    bool
 	err       chan error
@@ -138,31 +137,6 @@ func (s *APIServer) startRESTServer() (err error) {
 	return
 }
 
-func (s *APIServer) startRPCServer() (err error) {
-	addr, ok := s.Listeners[RPC]
-	if !ok {
-		return
-	}
-
-	s.rpcSrv, err = rpc.NewServer(addr)
-	if err != nil {
-		return
-	}
-	log.Infof("listen address: %s://%s", RPC, s.rpcSrv.Listener.Addr().String())
-
-	s.populateEndpoint(RPC, s.rpcSrv.Listener.Addr().String())
-
-	s.goroutine.Do(func(_ context.Context) {
-		err := s.rpcSrv.Serve()
-		if s.isClose {
-			return
-		}
-		log.Errorf(err, "error to start RPC API server %s", addr)
-		s.err <- err
-	})
-	return
-}
-
 func (s *APIServer) Start() {
 	if !s.isClose {
 		return
@@ -172,12 +146,6 @@ func (s *APIServer) Start() {
 	core.Instance.Endpoints = nil
 
 	err := s.startRESTServer()
-	if err != nil {
-		s.err <- err
-		return
-	}
-
-	err = s.startRPCServer()
 	if err != nil {
 		s.err <- err
 		return
@@ -193,7 +161,7 @@ func (s *APIServer) Start() {
 	}
 
 	// 自注册
-	err = backend.RegistryEngine().Start()
+	err = backend.GetRegistryEngine().Start()
 	if err != nil {
 		s.err <- err
 		return
@@ -207,15 +175,11 @@ func (s *APIServer) Stop() {
 	s.isClose = true
 
 	if !s.forked && core.ServerInfo.Config.SelfRegister {
-		backend.RegistryEngine().Stop()
+		backend.GetRegistryEngine().Stop()
 	}
 
 	if s.restSrv != nil {
 		s.restSrv.Shutdown()
-	}
-
-	if s.rpcSrv != nil {
-		s.rpcSrv.GracefulStop()
 	}
 
 	close(s.err)

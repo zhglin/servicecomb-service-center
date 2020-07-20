@@ -28,8 +28,8 @@ import (
 )
 //支持的plugin
 const (
-	UUID PluginName = iota
-	AUDIT_LOG
+	UUID Name = iota
+	AuditLog
 	AUTH
 	CIPHER
 	QUOTA
@@ -40,9 +40,9 @@ const (
 	typeEnd // for counting
 )
 
-var pluginNames = map[PluginName]string{
+var pluginNames = map[Name]string{
 	UUID:      "uuid",
-	AUDIT_LOG: "auditlog",
+	AuditLog:  "auditlog",
 	AUTH:      "auth",
 	CIPHER:    "cipher",
 	QUOTA:     "quota",
@@ -51,20 +51,21 @@ var pluginNames = map[PluginName]string{
 	DISCOVERY: "discovery",
 	TLS:       "ssl",
 }
+
 //发现组件
-func (pm *PluginManager) Discovery() discovery.AdaptorRepository {
+func (pm *Manager) Discovery() discovery.AdaptorRepository {
 	return pm.Instance(DISCOVERY).(discovery.AdaptorRepository)
 }
 //注册组件
-func (pm *PluginManager) Registry() registry.Registry {
+func (pm *Manager) Registry() registry.Registry {
 	return pm.Instance(REGISTRY).(registry.Registry)
 }
-func (pm *PluginManager) UUID() uuid.UUID { return pm.Instance(UUID).(uuid.UUID) }
-func (pm *PluginManager) AuditLog() auditlog.AuditLogger {
-	return pm.Instance(AUDIT_LOG).(auditlog.AuditLogger)
+func (pm *Manager) UUID() uuid.UUID { return pm.Instance(UUID).(uuid.UUID) }
+func (pm *Manager) AuditLog() auditlog.AuditLogger {
+	return pm.Instance(AuditLog).(auditlog.AuditLogger)
 }
-func (pm *PluginManager) Auth() auth.Auth              { return pm.Instance(AUTH).(auth.Auth) }
-func (pm *PluginManager) Cipher() security.Cipher      { return pm.Instance(CIPHER).(security.Cipher) }
-func (pm *PluginManager) Quota() quota.QuotaManager    { return pm.Instance(QUOTA).(quota.QuotaManager) }
-func (pm *PluginManager) Tracing() (v tracing.Tracing) { return pm.Instance(TRACING).(tracing.Tracing) }
-func (pm *PluginManager) TLS() tls.TLS                 { return pm.Instance(TLS).(tls.TLS) }
+func (pm *Manager) Auth() auth.Auth              { return pm.Instance(AUTH).(auth.Auth) }
+func (pm *Manager) Cipher() security.Cipher      { return pm.Instance(CIPHER).(security.Cipher) }
+func (pm *Manager) Quota() quota.Manager         { return pm.Instance(QUOTA).(quota.Manager) }
+func (pm *Manager) Tracing() (v tracing.Tracing) { return pm.Instance(TRACING).(tracing.Tracing) }
+func (pm *Manager) TLS() tls.TLS                 { return pm.Instance(TLS).(tls.TLS) }

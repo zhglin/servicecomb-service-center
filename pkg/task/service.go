@@ -14,20 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package task
 
 import "sync"
 
 var (
-	service TaskService
+	service Service
 	once    sync.Once
 )
 
 func init() {
 	service = NewTaskService()
 }
+
 // 全局的taskService
-func Service() TaskService {
+func GetService() Service {
 	once.Do(service.Run)
 	return service
 }

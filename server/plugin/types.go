@@ -24,19 +24,20 @@ import (
 
 // PluginName is an alias, it represents a plugin interface.
 // plugin名称
-type PluginName int
+type Name int
 
-// PluginImplName is an alias，it represents a plugin interface implementation.
-type PluginImplName string
+// ImplName is an alias，it represents a plugin interface implementation.
+type ImplName string
 
-// PluginInstance is an instance of a plugin interface which is represented by
-// PluginName.
+
+// Instance is an instance of a plugin interface which is represented by
+// Name.
 //plugin 接口
-type PluginInstance interface{}
+type Instance interface{}
 
 // String implements fmt.Stringer.
 // plugin对应的名称
-func (pn PluginName) String() string {
+func (pn Name) String() string {
 	if name, ok := pluginNames[pn]; ok {
 		return name
 	}
@@ -45,25 +46,25 @@ func (pn PluginName) String() string {
 
 // ActiveConfigs returns all the server's plugin config
 // 获取serviceInfo中使用的plugins名称
-func (pn PluginName) ActiveConfigs() util.JSONObject {
+func (pn Name) ActiveConfigs() util.JSONObject {
 	return core.ServerInfo.Config.Plugins.Object(pn.String())
 }
 
 // ClearConfigs clears the server's plugin config
-func (pn PluginName) ClearConfigs() {
+func (pn Name) ClearConfigs() {
 	core.ServerInfo.Config.Plugins.Set(pn.String(), nil)
 }
 
 // Plugin generates a plugin instance
-// Plugin holds the 'PluginName' and 'PluginImplName'
+// Plugin holds the 'Name' and 'ImplName'
 // to manage the plugin instance generation.
 // 标识一个plugin
 type Plugin struct {
 	// plugin的标识号
-	PName PluginName
+	PName Name
 	// 同一个plugin的不同实现的标识名称
-	Name  PluginImplName
+	Name  ImplName
 	// New news an instance of 'PName' represented plugin interface
 	// 创建plugin的实例的函数
-	New func() PluginInstance
+	New func() Instance
 }

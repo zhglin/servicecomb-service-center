@@ -14,9 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package auth
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type Auth interface {
 	Identify(r *http.Request) error

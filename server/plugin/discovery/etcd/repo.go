@@ -22,20 +22,22 @@ import (
 )
 
 func init() {
-	mgr.RegisterPlugin(mgr.Plugin{mgr.DISCOVERY, "buildin", NewRepository})
-	mgr.RegisterPlugin(mgr.Plugin{mgr.DISCOVERY, "etcd", NewRepository})
+	mgr.RegisterPlugin(mgr.Plugin{PName: mgr.DISCOVERY, Name: "buildin", New: NewRepository})
+	mgr.RegisterPlugin(mgr.Plugin{PName: mgr.DISCOVERY, Name: "etcd", New: NewRepository})
 }
+
 // 只是个代理
-type EtcdRepository struct {
+type Repository struct {
 }
-// 通过EtcdRepository创建真正的Adaptor
-func (r *EtcdRepository) New(t discovery.Type, cfg *discovery.Config) discovery.Adaptor {
+
+// 通过Repository创建真正的Adaptor
+func (r *Repository) New(t discovery.Type, cfg *discovery.Config) discovery.Adaptor {
 	return NewEtcdAdaptor(t.String(), cfg)
 }
 
-func NewRepository() mgr.PluginInstance {
+func NewRepository() mgr.Instance {
 	InitConfigs()
-	return &EtcdRepository{}
+	return &Repository{}
 }
 
 func InitConfigs() {

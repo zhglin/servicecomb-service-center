@@ -22,7 +22,7 @@ import (
 	mgr "github.com/apache/servicecomb-service-center/server/plugin"
 	"github.com/apache/servicecomb-service-center/server/plugin/discovery/etcd"
 	etcd2 "github.com/apache/servicecomb-service-center/server/plugin/registry/etcd"
-	"github.com/apache/servicecomb-service-center/server/plugin/tracing/buildin"
+	"github.com/apache/servicecomb-service-center/server/plugin/tracing/pzipkin"
 	"github.com/apache/servicecomb-service-center/server/service/kv"
 	"github.com/astaxie/beego"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func init() {
 	mgr.RegisterPlugin(mgr.Plugin{mgr.REGISTRY, "etcd", etcd2.NewRegistry})
 	mgr.RegisterPlugin(mgr.Plugin{mgr.DISCOVERY, "buildin", etcd.NewRepository})
 	mgr.RegisterPlugin(mgr.Plugin{mgr.DISCOVERY, "etcd", etcd.NewRepository})
-	mgr.RegisterPlugin(mgr.Plugin{mgr.TRACING, "buildin", buildin.New})
+	mgr.RegisterPlugin(mgr.Plugin{mgr.TRACING, "buildin", pzipkin.New})
 
 }
 func TestStoreData(t *testing.T) {
@@ -58,5 +58,16 @@ func TestStoreData(t *testing.T) {
 		r, err := kv.Get(context.Background(), "test")
 		assert.NoError(t, err)
 		assert.Equal(t, "value", string(r.Value))
+	})
+
+	t.Run("put many and list", func(t *testing.T) {
+		err := kv.Put(context.Background(), "/test/1", "value1")
+		assert.NoError(t, err)
+		err = kv.Put(context.Background(), "/test/2", "value2")
+		assert.NoError(t, err)
+		kvs, n, err := kv.List(context.Background(), "/test")
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), n)
+		t.Log(kvs)
 	})
 }

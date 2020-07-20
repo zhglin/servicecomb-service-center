@@ -10,12 +10,11 @@ It provides out of box support for metrics and tracing. It has a web portal to m
 # Components
 - server: a http server which provide restful API
 - scctl: CLI of server
-- syncer: multiple service centers cluster synchronization tool, designed for large microservice architectures
+- syncer: alpha feature. multiple cluster synchronization tool, designed for large microservice architectures
 
 ## Features
  - **[`Open API`](/server/core/swagger/v4.yaml)**: API doc(Open API format) management for microservice
  - **Metadata**: Metadata management for both microservice and microservice instance
- - **Dependency**: Microservice dependency management
  - **Separated**: Separated microservice and microservice instance entity management
  - **Domains**: Logical multiple domains management
  - **Security**: White and black list configuration for service discovery
@@ -24,18 +23,18 @@ It provides out of box support for metrics and tracing. It has a web portal to m
  - **[`Portal`](/frontend)**: Awesome web portal
  - **Fault tolerance**: Multiple fault tolerance mechanism and design in the architecture
  - **Performance**: Performance/Caching design
- - **[`Metrics`](/docs/integration-grafana.md)**: Able to expose Prometheus metric API automatically
- - **[`Tracing`](/docs/tracing.md)**: Able to report tracing data to Zipkin server
- - **[`Pluginable`](/docs/plugin.md)**: Able to load custom authentication, tls and other dynamic libraries
- - **[`CLI`](/scctl/README.md)**: Easy to control service center
- - **[`Kubernetes`](/docs/kubeclusters.md)**: Embrace kubernetes ecosystem and support multi cluster service discovery
- - **[`Datacenters`](/docs/multidcs.md)**: Additional layer of abstraction to clusters deployed in multiple datacenters
- - **[`Aggregation`](/docs/aggregate.md)**: Able to aggregate microservices from multiple registry platforms and
+ - **[`Metrics`](https://service-center.readthedocs.io/en/latest/user-guides/integration-grafana.html)**: Able to expose Prometheus metric API automatically
+ - **[`Tracing`](https://service-center.readthedocs.io/en/latest/plugins-tracing/tracing.html)**: Able to report tracing data to Zipkin server
+ - **[`Pluginable`](https://service-center.readthedocs.io/en/latest/design-guides/plugin.html)**: Able to load custom authentication, tls and other dynamic libraries
+ - **[`CLI`](https://service-center.readthedocs.io/en/latest/intro/scctl.html)**: Easy to control service center
+ - **[`Kubernetes`](https://service-center.readthedocs.io/en/latest/dev-guides/kubeclusters.html)**: Embrace kubernetes ecosystem and support multi cluster service discovery
+ - **[`Datacenters`](https://service-center.readthedocs.io/en/latest/dev-guides/multidcs.html)**: Additional layer of abstraction to clusters deployed in multiple datacenters
+ - **[`Aggregation`](https://service-center.readthedocs.io/en/latest/design-guides/design.html)**: Able to aggregate microservices from multiple registry platforms and
     support platform registry and client side registry at the same time
 
 ## Documentation
 
-Project documentation is available on the [ServiceComb website][servicecomb-website]. You can also find full document [`here`](/docs/README.md).
+Project documentation is available on the [ServiceComb website][servicecomb-website]. You can also find full document [`here`](https://service-center.readthedocs.io/).
 
 [servicecomb-website]: http://servicecomb.apache.org/
 

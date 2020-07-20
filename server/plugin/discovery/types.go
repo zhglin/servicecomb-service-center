@@ -36,6 +36,7 @@ const (
 )
 // etcd中数据类型
 type Type int
+
 // 转换成名称字符串
 func (st Type) String() string {
 	if int(st) < 0 {
@@ -46,6 +47,7 @@ func (st Type) String() string {
 	}
 	return "TYPE" + strconv.Itoa(int(st))
 }
+
 // 注册数据类型
 func RegisterType(name string) (newId Type, err error) {
 	// 已注册

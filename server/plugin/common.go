@@ -30,7 +30,7 @@ const (
 
 // DynamicPluginFunc should be called in buildin implement
 // 查看是否具有dynamicPlugin 以及对应的 函数
-func DynamicPluginFunc(pn PluginName, funcName string) pg.Symbol {
+func DynamicPluginFunc(pn Name, funcName string) pg.Symbol {
 	if wi, ok := Plugins().instances[pn]; ok && !wi.dynamic {
 		return nil
 	}

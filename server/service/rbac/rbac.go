@@ -22,7 +22,8 @@ import (
 	"crypto/rsa"
 	"errors"
 	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/model"
+	"github.com/apache/servicecomb-service-center/pkg/rbacframe"
+	"github.com/apache/servicecomb-service-center/server/service"
 	"github.com/apache/servicecomb-service-center/server/service/cipher"
 	"github.com/apache/servicecomb-service-center/server/service/rbac/dao"
 	"github.com/astaxie/beego"
@@ -37,10 +38,15 @@ const (
 	InitPassword = "SC_INIT_ROOT_PASSWORD"
 	PubFilePath  = "rbac_rsa_public_key_file"
 )
+const (
+	ResourceAccount = "account"
+)
 
 var (
-	ErrInputCurrentPassword = errors.New("current password should not be empty")
-	ErrInputChangeAccount   = errors.New("can not change other account password")
+	ErrEmptyCurrentPassword = errors.New("current password should not be empty")
+	ErrNoPermChangeAccount  = errors.New("can not change other account password")
+	ErrWrongPassword        = errors.New("current pwd is wrong")
+	ErrSamePassword         = errors.New("the password can not be same as old one")
 )
 
 //Init decide whether enable rbac function and save root account to db
@@ -50,6 +56,7 @@ func Init() {
 		log.Info("rbac is disabled")
 		return
 	}
+	initResourceMap()
 	err := authr.Init()
 	if err != nil {
 		log.Fatal("can not enable auth module", err)
@@ -63,7 +70,15 @@ func Init() {
 	}
 	readPrivateKey()
 	readPublicKey()
+	rbacframe.Add2WhiteAPIList("/v4/token")
 	log.Info("rbac is enabled")
+}
+func initResourceMap() {
+	rbacframe.MapResource("/v4/account", ResourceAccount)
+	rbacframe.MapResource("/v4/account/:name", ResourceAccount)
+	rbacframe.MapResource("/v4/role", "role")
+	//TODO now simply write dead code "*" to map all other API except account and role to service, should define resource for every API in future
+	rbacframe.MapResource("*", "service")
 }
 
 //readPublicKey read key to memory
@@ -75,7 +90,10 @@ func readPrivateKey() {
 		log.Fatal("can not read private key", err)
 		return
 	}
-	archaius.Set("rbac_private_key", string(data))
+	err = archaius.Set("rbac_private_key", string(data))
+	if err != nil {
+		log.Fatal("can not init rbac", err)
+	}
 	log.Info("read private key success")
 }
 
@@ -88,7 +106,10 @@ func readPublicKey() {
 		log.Fatal("can not find public key", err)
 		return
 	}
-	archaius.Set("rbac_public_key", string(content))
+	err = archaius.Set("rbac_public_key", string(content))
+	if err != nil {
+		log.Fatal("", err)
+	}
 	log.Info("read public key success")
 }
 func initFirstTime(admin string) {
@@ -97,11 +118,17 @@ func initFirstTime(admin string) {
 	if pwd == "" {
 		log.Fatal("can not enable rbac, password is empty", nil)
 	}
-	if err := dao.CreateAccount(context.Background(), &model.Account{
+	a := &rbacframe.Account{
 		Name:     admin,
 		Password: pwd,
-		Role:     model.RoleAdmin,
-	}); err != nil {
+		Role:     rbacframe.RoleAdmin,
+	}
+	err := service.ValidateCreateAccount(a)
+	if err != nil {
+		log.Fatal("invalid pwd", err)
+		return
+	}
+	if err := dao.CreateAccount(context.Background(), a); err != nil {
 		if err == dao.ErrDuplicated {
 			log.Info("rbac is enabled")
 			return
@@ -121,21 +148,18 @@ func PublicKey() string {
 }
 
 //privateKey get decrypted private key to verify a token
-func privateKey() (string, error) {
+func privateKey() string {
 	ep := archaius.GetString("rbac_private_key", "")
 	p, err := cipher.Decrypt(ep)
 	if err != nil {
-		return "", err
+		return ep
 	}
-	return p, nil
+	return p
 }
 
 //GetPrivateKey return rsa key instance
 func GetPrivateKey() (*rsa.PrivateKey, error) {
-	sk, err := privateKey()
-	if err != nil {
-		return nil, err
-	}
+	sk := privateKey()
 	p, err := secret.ParseRSAPrivateKey(sk)
 	if err != nil {
 		log.Error("can not get key:", err)

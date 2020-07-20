@@ -58,6 +58,16 @@ func Get(ctx context.Context, key string) (*mvccpb.KeyValue, error) {
 	return resp.Kvs[0], err
 }
 
+//Get get kv list
+func List(ctx context.Context, key string) ([]*mvccpb.KeyValue, int64, error) {
+	resp, err := backend.Registry().Do(ctx, registry.GET,
+		registry.WithStrKey(key), registry.WithPrefix())
+	if err != nil {
+		return nil, 0, err
+	}
+	return resp.Kvs, resp.Count, nil
+}
+
 //Exist get one kv, if can not get return false
 func Exist(ctx context.Context, key string) (bool, error) {
 	resp, err := backend.Registry().Do(ctx, registry.GET,
@@ -69,4 +79,12 @@ func Exist(ctx context.Context, key string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+func Delete(ctx context.Context, key string) (bool, error) {
+	resp, err := backend.Registry().Do(ctx, registry.DEL,
+		registry.WithStrKey(key))
+	if err != nil {
+		return false, err
+	}
+	return resp.Count != 0, nil
 }

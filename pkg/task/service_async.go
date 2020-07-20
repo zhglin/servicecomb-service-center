@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package task
 
 import (
@@ -219,8 +220,9 @@ func (lat *AsyncTaskService) renew() {
 	}
 	lat.executors = newExecutor
 }
+
 // 创建taskService
-func NewTaskService() TaskService {
+func NewTaskService() Service {
 	lat := &AsyncTaskService{
 		goroutine: gopool.New(context.Background()),
 		ready:     make(chan struct{}),

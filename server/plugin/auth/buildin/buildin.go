@@ -14,12 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package buildin
 
 import (
 	"context"
 	"errors"
+	errorsEx "github.com/apache/servicecomb-service-center/pkg/errors"
 	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/rbacframe"
+	"github.com/apache/servicecomb-service-center/pkg/rest"
 	mgr "github.com/apache/servicecomb-service-center/server/plugin"
 	"github.com/apache/servicecomb-service-center/server/service/rbac"
 	"github.com/go-chassis/go-chassis/security/authr"
@@ -29,10 +33,10 @@ import (
 )
 
 func init() {
-	mgr.RegisterPlugin(mgr.Plugin{mgr.AUTH, "buildin", New})
+	mgr.RegisterPlugin(mgr.Plugin{PName: mgr.AUTH, Name: "buildin", New: New})
 }
 
-func New() mgr.PluginInstance {
+func New() mgr.Instance {
 	return &TokenAuthenticator{}
 }
 
@@ -43,39 +47,68 @@ func (ba *TokenAuthenticator) Identify(req *http.Request) error {
 	if !rbac.Enabled() {
 		return nil
 	}
-	if !mustAuth(req) {
+	pattern, ok := req.Context().Value(rest.CtxMatchPattern).(string)
+	if ok && !rbacframe.MustAuth(pattern) {
 		return nil
 	}
-
 	v := req.Header.Get(restful.HeaderAuth)
 	if v == "" {
-		return errors.New("should provide token in header")
+		return rbacframe.ErrNoHeader
 	}
 	s := strings.Split(v, " ")
 	if len(s) != 2 {
-		return errors.New("invalid auth header")
+		return rbacframe.ErrInvalidHeader
 	}
 	to := s[1]
-	//TODO rbac
+
 	claims, err := authr.Authenticate(req.Context(), to)
 	if err != nil {
 		log.Errorf(err, "authenticate request failed, %s %s", req.Method, req.RequestURI)
 		return err
 	}
-	log.Info("user access")
-	req2 := req.WithContext(context.WithValue(req.Context(), "accountInfo", claims))
+	m, ok := claims.(map[string]interface{})
+	if !ok {
+		log.Error("claims convert failed", rbacframe.ErrConvertErr)
+		return rbacframe.ErrConvertErr
+	}
+	role := m[rbacframe.ClaimsRole]
+	roleName, ok := role.(string)
+	if !ok {
+		log.Error("role convert failed", rbacframe.ErrConvertErr)
+		return rbacframe.ErrConvertErr
+	}
+	var apiPattern string
+	a := req.Context().Value(rest.CtxMatchPattern)
+	if a == nil { //handle exception
+		apiPattern = req.URL.Path
+		log.Warn("can not find api pattern")
+	} else {
+		apiPattern = a.(string)
+	}
+	err = checkPerm(roleName, apiPattern)
+	if err != nil {
+		return err
+	}
+	req2 := req.WithContext(rbacframe.NewContext(req.Context(), claims))
 	*req = *req2
 	return nil
 }
-func mustAuth(req *http.Request) bool {
-	if strings.Contains(req.URL.Path, "/v4/token") {
-		return false
+
+//this method decouple business code and perm checks
+func checkPerm(roleName, apiPattern string) error {
+	resource := rbacframe.GetResource(apiPattern)
+	if resource == "" {
+		//fast fail, no need to access role storage
+		return errors.New(errorsEx.MsgNoPerm)
 	}
-	if strings.Contains(req.URL.Path, "/health") {
-		return false
+	//TODO add verbs,project
+	allow, err := rbac.Allow(context.TODO(), roleName, "", resource, "")
+	if err != nil {
+		log.Error("", err)
+		return errors.New(errorsEx.MsgRolePerm)
 	}
-	if strings.Contains(req.URL.Path, "/version") {
-		return false
+	if !allow {
+		return errors.New(errorsEx.MsgNoPerm)
 	}
-	return true
+	return nil
 }

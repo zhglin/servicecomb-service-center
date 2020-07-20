@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package scerror
 
 import (
@@ -30,7 +31,7 @@ var errors = map[int32]string{
 	ErrServiceVersionNotExists: "Micro-service version does not exist",
 	ErrDeployedInstance:        "Micro-service has deployed instance(s)",
 	ErrDependedOnConsumer:      "Consumer(s) depends on this micro-service",
-	ErrUndefinedSchemaId:       "Undefined schema id",
+	ErrUndefinedSchemaID:       "Undefined schema id",
 	ErrModifySchemaNotAllow:    "Not allowed to modify schema",
 	ErrSchemaNotExists:         "Schema does not exist",
 	ErrInstanceNotExists:       "Instance does not exist",
@@ -47,6 +48,7 @@ var errors = map[int32]string{
 	ErrUnavailableQuota:        "Quota service is unavailable",
 	ErrEndpointAlreadyExists:   "Endpoint is already belong to other service",
 	ErrForbidden:               "Forbidden",
+	ErrConflictAccount:         "account name is duplicated",
 }
 
 const (
@@ -55,7 +57,7 @@ const (
 	ErrServiceAlreadyExists    int32 = 400010
 	ErrServiceNotExists        int32 = 400012
 	ErrDeployedInstance        int32 = 400013
-	ErrUndefinedSchemaId       int32 = 400014
+	ErrUndefinedSchemaID       int32 = 400014
 	ErrModifySchemaNotAllow    int32 = 400015
 	ErrSchemaNotExists         int32 = 400016
 	ErrInstanceNotExists       int32 = 400017
@@ -69,11 +71,16 @@ const (
 	ErrEndpointAlreadyExists   int32 = 400025
 	ErrServiceVersionNotExists int32 = 400026
 	ErrNotEnoughQuota          int32 = 400100
-	ErrUnauthorized            int32 = 401002
-	ErrForbidden               int32 = 403001
-	ErrInternal                int32 = 500003
-	ErrUnavailableBackend      int32 = 500011
-	ErrUnavailableQuota        int32 = 500101
+
+	ErrUnauthorized int32 = 401002
+
+	ErrForbidden int32 = 403001
+
+	ErrConflictAccount int32 = 409001
+
+	ErrInternal           int32 = 500003
+	ErrUnavailableBackend int32 = 500011
+	ErrUnavailableQuota   int32 = 500101
 )
 
 type Error struct {
@@ -99,10 +106,7 @@ func (e *Error) StatusCode() int {
 }
 
 func (e *Error) InternalError() bool {
-	if e.Code >= 500000 {
-		return true
-	}
-	return false
+	return e.Code >= 500000
 }
 
 func NewError(code int32, detail string) *Error {
