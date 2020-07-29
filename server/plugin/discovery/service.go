@@ -16,6 +16,7 @@
  */
 package discovery
 
+// 独立运行组件的通用接口
 type Runnable interface {
 	Run()
 	Stop()

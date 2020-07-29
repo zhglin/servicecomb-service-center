@@ -25,6 +25,7 @@ import (
 // Indexer searches k-v data.
 // An indexer may search k-v data from many data sources,
 // e.g. cache, registry, file, other Indexers...
+// 查询数据接口
 type Indexer interface {
 	// Search searches k-v data based on the input options
 	Search(ctx context.Context, opts ...registry.PluginOpOption) (*Response, error)

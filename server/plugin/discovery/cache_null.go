@@ -16,6 +16,7 @@
  */
 package discovery
 
+// 不适用cache的cache实例
 var (
 	NullCache  = &nullCache{}
 	NullCacher = &nullCacher{}

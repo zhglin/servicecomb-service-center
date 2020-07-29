@@ -30,22 +30,25 @@ import (
 // CacheIndexer searches data from etcd cache(firstly) and
 // etcd server(secondly).
 type CacheIndexer struct {
-	*Indexer
-	*discovery.CacheIndexer
+	*Indexer //etcd查询接口
+	*discovery.CacheIndexer //cache查询接口
 }
 
 func (i *CacheIndexer) Search(ctx context.Context, opts ...registry.PluginOpOption) (*discovery.Response, error) {
 	op := registry.OpGet(opts...)
 	key := util.BytesToStringWithNoCopy(op.Key)
 
+	// 不使用cache
 	if op.NoCache() {
 		return i.Indexer.Search(ctx, opts...)
 	}
 
+	// 要查询的key是否是discovery.type对应的key
 	if err := i.CheckPrefix(key); err != nil {
 		return nil, fmt.Errorf("%s, cache is '%s'", err.Error(), i.Cache.Name())
 	}
 
+	// 使用cache查询
 	resp, err := i.CacheIndexer.Search(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -54,6 +57,8 @@ func (i *CacheIndexer) Search(ctx context.Context, opts ...registry.PluginOpOpti
 	if resp.Count > 0 || op.CacheOnly() {
 		return resp, nil
 	}
+
+	// cache查不到直接查etcd
 	return i.Indexer.Search(ctx, opts...)
 }
 

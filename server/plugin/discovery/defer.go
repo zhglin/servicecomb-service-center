@@ -15,9 +15,12 @@
  * limitations under the License.
  */
 package discovery
-
+// discovery.Type 独立的处理函数接口
 type DeferHandler interface {
+	// 应用event函数
 	OnCondition(CacheReader, []KvEvent) bool
+	// OnCondition处理后的数据
 	HandleChan() <-chan KvEvent
+	// 重置
 	Reset() bool
 }

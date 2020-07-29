@@ -24,12 +24,15 @@ import (
 )
 
 type innerListWatch struct {
+	// registry实例
 	Client registry.Registry
+	// etcd key前缀
 	Prefix string
-
+	// 最后的版本号 etcd全局数据的版本。当数据发生变更，包括创建、修改、删除，revision 对应的都会 +1
 	rev int64
 }
 
+// 获取全量数据
 func (lw *innerListWatch) List(op ListWatchConfig) (*registry.PluginResponse, error) {
 	otCtx, cancel := context.WithTimeout(op.Context, op.Timeout)
 	defer cancel()
@@ -38,6 +41,7 @@ func (lw *innerListWatch) List(op ListWatchConfig) (*registry.PluginResponse, er
 		log.Errorf(err, "list prefix %s failed, current rev: %d", lw.Prefix, lw.Revision())
 		return nil, err
 	}
+	// 设置版本号
 	lw.setRevision(resp.Revision)
 	return resp, nil
 }
@@ -50,10 +54,12 @@ func (lw *innerListWatch) setRevision(rev int64) {
 	lw.rev = rev
 }
 
+// 每次都创建新的InnerWatcher
 func (lw *innerListWatch) Watch(op ListWatchConfig) Watcher {
 	return newInnerWatcher(lw, op)
 }
 
+// watch操作
 func (lw *innerListWatch) DoWatch(ctx context.Context, f func(*registry.PluginResponse)) error {
 	rev := lw.Revision()
 	opts := append(
@@ -74,8 +80,9 @@ func (lw *innerListWatch) DoWatch(ctx context.Context, f func(*registry.PluginRe
 	err := lw.Client.Watch(ctx, opts...)
 	if err != nil { // compact可能会导致watch失败 or message body size lager than 4MB
 		log.Errorf(err, "watch prefix %s failed, start rev: %d+1->%d->0", lw.Prefix, rev, lw.Revision())
-
+		// 异常设置vision为0，让上层全量拉取
 		lw.setRevision(0)
+		// watch异常写入nil标记
 		f(nil)
 	}
 	return err

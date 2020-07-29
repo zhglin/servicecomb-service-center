@@ -35,9 +35,10 @@ import (
 type Indexer struct {
 	Client registry.Registry
 	Parser pb.Parser
-	Root   string
+	Root   string // discovery.type对应的key前缀
 }
 
+// 校验key是不是对应的discovery.type对应的key前缀
 func (i *Indexer) CheckPrefix(key string) error {
 	if strings.Index(key, i.Root) != 0 {
 		return fmt.Errorf("search '%s' mismatch pattern %s", key, i.Root)
@@ -71,6 +72,7 @@ func (i *Indexer) Search(ctx context.Context, opts ...registry.PluginOpOption) (
 		p = nil
 	}
 
+	// 对etcd的访问结果转换成cache中的KeyValue类型
 	kvs := make([]*discovery.KeyValue, 0, len(resp.Kvs))
 	for _, src := range resp.Kvs {
 		kv := discovery.NewKeyValue()
@@ -84,6 +86,7 @@ func (i *Indexer) Search(ctx context.Context, opts ...registry.PluginOpOption) (
 }
 
 // Creditable implements discovery.Indexer.Creditable.
+// 是否可信
 func (i *Indexer) Creditable() bool {
 	return true
 }

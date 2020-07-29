@@ -94,6 +94,7 @@ func (op PluginOp) FormatURLParams() string {
 	return buf.String()
 }
 
+// 不适用本地cache进行查询的条件
 func (op PluginOp) NoCache() bool {
 	return op.Mode == ModeNoCache ||
 		op.Revision > 0 ||

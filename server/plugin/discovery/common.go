@@ -21,6 +21,6 @@ import (
 )
 
 const (
-	DefaultTimeout       = 30 * time.Second
+	DefaultTimeout       = 30 * time.Second // watch链接的默认超时时间
 	DefaultCacheInitSize = 100
 )

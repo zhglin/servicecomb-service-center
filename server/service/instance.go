@@ -140,7 +140,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 			Response: pb.CreateResponseWithSCErr(err),
 		}, nil
 	}
-
+	// etcd租约过期时间
 	ttl := int64(instance.HealthCheck.Interval * (instance.HealthCheck.Times + 1))
 	if ttlFromEnv > 0 {
 		ttl = ttlFromEnv

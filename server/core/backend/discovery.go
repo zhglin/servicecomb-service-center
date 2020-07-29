@@ -37,19 +37,21 @@ func init() {
 	store.Initialize()
 	registerInnerTypes()
 }
+
 // discovery etcd中的数据管理器
 type KvStore struct {
 	// 各个类型的addOn配置
-	AddOns      map[discovery.Type]AddOn
+	AddOns map[discovery.Type]AddOn
 	// 所有类型的adaptors实例
-	adaptors    util.ConcurrentMap
+	adaptors util.ConcurrentMap
+	// 异步任务处理器
 	taskService task.Service
 	// 是否就绪
-	ready       chan struct{}
-	goroutine   *gopool.Pool
-	isClose     bool
+	ready     chan struct{}
+	goroutine *gopool.Pool
+	isClose   bool
 	// 最新的版本号
-	rev         int64
+	rev int64
 }
 
 func (s *KvStore) Initialize() {
@@ -58,20 +60,24 @@ func (s *KvStore) Initialize() {
 	s.ready = make(chan struct{})
 	s.goroutine = gopool.New(context.Background())
 }
+
 // kvStore的事件处理函数 记录最新的版本号
 func (s *KvStore) OnCacheEvent(evt discovery.KvEvent) {
 	if s.rev < evt.Revision {
 		s.rev = evt.Revision
 	}
 }
+
 //为addOn添加自身的事件处理函数
 func (s *KvStore) InjectConfig(cfg *discovery.Config) *discovery.Config {
 	return cfg.AppendEventFunc(s.OnCacheEvent)
 }
+
 // 获取discovery组件实例
 func (s *KvStore) repo() discovery.AdaptorRepository {
 	return plugin.Plugins().Discovery()
 }
+
 // 获取或创建指定类型的adaptor
 func (s *KvStore) getOrCreateAdaptor(t discovery.Type) discovery.Adaptor {
 	v, _ := s.adaptors.Fetch(t, func() (interface{}, error) {
@@ -87,12 +93,14 @@ func (s *KvStore) getOrCreateAdaptor(t discovery.Type) discovery.Adaptor {
 	})
 	return v.(discovery.Adaptor)
 }
+
 // 启动函数 server启动时调用
 func (s *KvStore) Run() {
 	s.goroutine.Do(s.store)
 	s.goroutine.Do(s.autoClearCache)
 	s.taskService.Run()
 }
+
 // 创建所有类型的adaptor
 func (s *KvStore) store(ctx context.Context) {
 	// new all types
@@ -101,8 +109,7 @@ func (s *KvStore) store(ctx context.Context) {
 		case <-ctx.Done():
 			return
 			// 一直阻塞 直到adaptor准备好数据
-			//如果启动过程中有问题会一直阻塞，不会触发panic
-			//因为运行期间也可能会触发panic
+			// 如果启动过程中有panic，会触发panic
 		case <-s.getOrCreateAdaptor(t).Ready():
 		}
 	}
@@ -111,7 +118,10 @@ func (s *KvStore) store(ctx context.Context) {
 
 	log.Debugf("all adaptors are ready")
 }
+
 // 定时清理cache
+// 会先把cache清空，本次cache获取不到数据，会到etcd进行重试
+// cache会进行全量数据的同步
 func (s *KvStore) autoClearCache(ctx context.Context) {
 	// 未设置清理间隔
 	if core.ServerInfo.Config.CacheTTL == 0 {
@@ -157,11 +167,13 @@ func (s *KvStore) Stop() {
 
 	log.Debugf("store daemon stopped")
 }
+
 // 是否已就绪
 func (s *KvStore) Ready() <-chan struct{} {
 	<-s.taskService.Ready()
 	return s.ready
 }
+
 // 注册addOn
 func (s *KvStore) Install(addOn AddOn) (id discovery.Type, err error) {
 	if addOn == nil || len(addOn.Name()) == 0 || addOn.Config() == nil {
@@ -182,6 +194,7 @@ func (s *KvStore) Install(addOn AddOn) (id discovery.Type, err error) {
 	log.Infof("install new type %d:%s->%s", id, addOn.Name(), addOn.Config().Key)
 	return
 }
+
 // 注册类型配置 异常直接panic
 func (s *KvStore) MustInstall(addOn AddOn) discovery.Type {
 	id, err := s.Install(addOn)

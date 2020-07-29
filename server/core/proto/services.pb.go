@@ -317,7 +317,9 @@ type DeleteServiceTagsResponse struct {
 type HealthCheck struct {
 	Mode     string `protobuf:"bytes,1,opt,name=mode" json:"mode,omitempty"`
 	Port     int32  `protobuf:"varint,2,opt,name=port" json:"port,omitempty"`
+	//定时上报的时间间隔 默认30秒
 	Interval int32  `protobuf:"varint,3,opt,name=interval" json:"interval,omitempty"`
+	// Interval * (Times + 1) = 租约过期时间 = 自我保护时间
 	Times    int32  `protobuf:"varint,4,opt,name=times" json:"times,omitempty"`
 	Url      string `protobuf:"bytes,5,opt,name=url" json:"url,omitempty"`
 }

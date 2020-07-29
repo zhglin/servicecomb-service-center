@@ -31,7 +31,7 @@ type Config struct {
 	// 全量从etcd拉取数据时 etcd链接超时时间
 	Timeout      time.Duration
 	Period       time.Duration
-	// 事件处理函数
+	// 事件处理函数 不同的discovery.Type绑定不同的处理函数 InstanceEventDeferHandler
 	DeferHandler DeferHandler
 	// 事件处理链
 	OnEvent      KvEventFunc
@@ -68,11 +68,13 @@ func (cfg *Config) WithDeferHandler(h DeferHandler) *Config {
 	cfg.DeferHandler = h
 	return cfg
 }
+
 // 设置一个处理器 没啥用 AppendEventFunc支持此功能
 func (cfg *Config) WithEventFunc(f KvEventFunc) *Config {
 	cfg.OnEvent = f
 	return cfg
 }
+
 // 把事件处理函数组装成处理链
 func (cfg *Config) AppendEventFunc(f KvEventFunc) *Config {
 	if prev := cfg.OnEvent; prev != nil {
@@ -86,6 +88,7 @@ func (cfg *Config) AppendEventFunc(f KvEventFunc) *Config {
 	return cfg
 }
 
+// 数据的json解析函数
 func (cfg *Config) WithParser(parser pb.Parser) *Config {
 	cfg.Parser = parser
 	return cfg

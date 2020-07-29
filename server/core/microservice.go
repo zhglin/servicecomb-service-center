@@ -44,8 +44,8 @@ const (
 	RegistryServiceName  = "SERVICECENTER"
 	RegistryServiceAlias = "SERVICECENTER"
 
-	RegistryDefaultLeaseRenewalinterval int32 = 30
-	RegistryDefaultLeaseRetrytimes      int32 = 3
+	RegistryDefaultLeaseRenewalinterval int32 = 30  // 默认续约时间
+	RegistryDefaultLeaseRetrytimes      int32 = 3	// etcd租约时间 30 * 3
 
 	CtxScSelf     = "_sc_self"
 	CtxScRegistry = "_registryOnly"

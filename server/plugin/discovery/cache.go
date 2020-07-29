@@ -18,12 +18,14 @@ package discovery
 
 // Cacher manages cache of some data source, e.g. etcd, kubernetes.
 // An user can do nothing but read the managed cache.
+// cache管理器接口 实际就是Cache
 type Cacher interface {
 	// Cache gets the cache that Cacher manages.
 	Cache() CacheReader
 }
 
 // Cache stores k-v data.
+// cache读写接口
 type Cache interface {
 	CacheReader
 	// Put puts a k-v
@@ -39,6 +41,7 @@ type Cache interface {
 }
 
 // CacheReader reads k-v data.
+// cache只读接口
 type CacheReader interface {
 	Name() string // The name of implementation
 	Size() int    // the bytes size of the cache

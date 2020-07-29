@@ -77,16 +77,19 @@ var (
 		return json.Unmarshal(src, *d)
 	}
 )
-
+// etcd数据解析接口
 type Parser interface {
 	Unmarshal(src []byte) (interface{}, error)
 }
 
 type CommonParser struct {
+	// 创建空的 struct
 	NewFunc  CreateValueFunc
+	// json解析到 空struct中
 	FromFunc ParseValueFunc
 }
 
+// 解析函数  先创建个空的struct 再json解析到空struct中
 func (p *CommonParser) Unmarshal(src []byte) (interface{}, error) {
 	v := p.NewFunc()
 	if err := p.FromFunc(src, &v); err != nil {
@@ -107,7 +110,7 @@ var (
 	DependencyRuleParser  = &CommonParser{newDependencyRule, JsonUnmarshal}
 	DependencyQueueParser = &CommonParser{newDependencyQueue, JsonUnmarshal}
 )
-
+// 解析前的校验
 func check(src []byte, dist interface{}) error {
 	if src == nil {
 		return errParseNilPoint

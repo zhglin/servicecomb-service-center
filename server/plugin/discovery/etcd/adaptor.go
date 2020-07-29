@@ -48,6 +48,7 @@ func (se *Adaptor) Ready() <-chan struct{} {
 	return closedCh
 }
 
+// 创建adaptor cache不同
 func NewEtcdAdaptor(name string, cfg *discovery.Config) *Adaptor {
 	var adaptor Adaptor
 	switch {

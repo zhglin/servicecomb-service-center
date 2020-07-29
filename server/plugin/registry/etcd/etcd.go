@@ -358,12 +358,13 @@ func (c *Client) PutNoOverride(ctx context.Context, opts ...registry.PluginOpOpt
 	}
 	return resp.Succeeded, nil
 }
-
+// etcd 分页查询
 func (c *Client) paging(ctx context.Context, op registry.PluginOp) (*clientv3.GetResponse, error) {
 	var etcdResp *clientv3.GetResponse
 	key := util.BytesToStringWithNoCopy(op.Key)
 
 	start := time.Now()
+	// 获取总数
 	tempOp := op
 	tempOp.CountOnly = true
 	countResp, err := c.Client.Get(ctx, key, c.toGetRequest(tempOp)...)
@@ -372,6 +373,7 @@ func (c *Client) paging(ctx context.Context, op registry.PluginOp) (*clientv3.Ge
 	}
 
 	recordCount := countResp.Count
+	// 不需要分页查询
 	if op.Offset == -1 && recordCount <= op.Limit {
 		return nil, nil // no need to do paging
 	}
@@ -679,7 +681,7 @@ func (c *Client) Watch(ctx context.Context, opts ...registry.PluginOpOption) (er
 	n := len(op.Key)
 	if n > 0 {
 		client := clientv3.NewWatcher(c.Client)
-		defer client.Close()
+		defer client.Close() //出现err, return并且关闭watch链接
 
 		key := util.BytesToStringWithNoCopy(op.Key)
 

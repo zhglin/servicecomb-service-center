@@ -29,23 +29,31 @@ import (
 )
 
 type deferItem struct {
-	ttl   int32 // in seconds
+	ttl   int32 // in seconds 过期时间
 	event discovery.KvEvent
 }
 
+// 自我保护handler
+// 统计deferCheckWindow事件段内的delete事件占比是否大于Percent
 type InstanceEventDeferHandler struct {
-	Percent float64
-
+	Percent float64  // 生效的比例
+	// 只读cache
 	cache     discovery.CacheReader
 	once      sync.Once
 	enabled   bool
+	// 被保护的event(过期删除的instance)
 	items     map[string]*deferItem
+	// 追加事件的chan eventBlockSize的换成
 	pendingCh chan []discovery.KvEvent
+	// 处理后的可返回的事件
 	deferCh   chan discovery.KvEvent
+	// 重置事件
 	resetCh   chan struct{}
 }
 
+// 接受数据
 func (iedh *InstanceEventDeferHandler) OnCondition(cache discovery.CacheReader, evts []discovery.KvEvent) bool {
+	// 生效比例为0 不处理
 	if iedh.Percent <= 0 {
 		return false
 	}
@@ -56,13 +64,16 @@ func (iedh *InstanceEventDeferHandler) OnCondition(cache discovery.CacheReader, 
 		iedh.pendingCh = make(chan []discovery.KvEvent, eventBlockSize)
 		iedh.deferCh = make(chan discovery.KvEvent, eventBlockSize)
 		iedh.resetCh = make(chan struct{})
+		// 处理事件的协程
 		gopool.Go(iedh.check)
 	})
 
+	// 写入事件
 	iedh.pendingCh <- evts
 	return true
 }
 
+// 处理事件 生成iedh.items数据
 func (iedh *InstanceEventDeferHandler) recoverOrDefer(evt discovery.KvEvent) {
 	if evt.KV == nil {
 		log.Errorf(nil, "defer or recover a %s nil KV", evt.Type)
@@ -72,6 +83,7 @@ func (iedh *InstanceEventDeferHandler) recoverOrDefer(evt discovery.KvEvent) {
 	key := util.BytesToStringWithNoCopy(kv.Key)
 	_, ok := iedh.items[key]
 	switch evt.Type {
+	// 添加 修改事件 直接recover
 	case pb.EVT_CREATE, pb.EVT_UPDATE:
 		if ok {
 			log.Infof("recovered key %s events", key)
@@ -88,10 +100,14 @@ func (iedh *InstanceEventDeferHandler) recoverOrDefer(evt discovery.KvEvent) {
 			log.Errorf(nil, "defer or recover a %s nil Value, KV is %v", evt.Type, kv)
 			return
 		}
+
+		// 保护周期  etcd租约过期时间
 		ttl := instance.HealthCheck.Interval * (instance.HealthCheck.Times + 1)
 		if ttl <= 0 || ttl > selfPreservationMaxTTL {
 			ttl = selfPreservationMaxTTL
 		}
+
+		// 删除的事件添加到items
 		iedh.items[key] = &deferItem{
 			ttl:   ttl,
 			event: evt,
@@ -99,6 +115,7 @@ func (iedh *InstanceEventDeferHandler) recoverOrDefer(evt discovery.KvEvent) {
 	}
 }
 
+// 返回处理后的数据
 func (iedh *InstanceEventDeferHandler) HandleChan() <-chan discovery.KvEvent {
 	return iedh.deferCh
 }
@@ -113,20 +130,24 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case evts := <-iedh.pendingCh:
+		case evts := <-iedh.pendingCh: // 处理新生成的事件 收集delete事件
+			// 处理事件
 			for _, evt := range evts {
 				iedh.recoverOrDefer(evt)
 			}
 
+			// 无删除事件
 			del := len(iedh.items)
 			if del == 0 {
 				continue
 			}
 
+			// 已开启 跳过
 			if iedh.enabled {
 				continue
 			}
 
+			//是否达到开启条件
 			total := iedh.cache.GetAll(nil)
 			if total > selfPreservationInitCount && float64(del) >= float64(total)*iedh.Percent {
 				iedh.enabled = true
@@ -134,14 +155,18 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 					del, total, iedh.Percent*100)
 			}
 
+			// 是否收集过delete数据 未收集过就延迟deferCheckWindow时间
+			// 一次收集deferCheckWindow时间段的delete事件
 			if !n {
 				util.ResetTimer(t, deferCheckWindow)
+				// 标记收集过
 				n = true
 			}
-		case <-t.C:
+		case <-t.C: // 处理items中的delete事件
 			n = false
 			t.Reset(deferCheckWindow)
 
+			// 未开启时全部recover
 			if !iedh.enabled {
 				for _, item := range iedh.items {
 					iedh.recover(item.event)
@@ -149,6 +174,7 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 				continue
 			}
 
+			// 已开启 依次减少ttl ttl<0 recover
 			for key, item := range iedh.items {
 				item.ttl -= interval
 				if item.ttl > 0 {
@@ -157,6 +183,8 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 				log.Warnf("defer handle timed out, removed key is %s", key)
 				iedh.recover(item.event)
 			}
+
+			// 没有需要保护的event renew
 			if len(iedh.items) == 0 {
 				iedh.renew()
 				log.Warnf("self preservation is stopped")
@@ -170,17 +198,23 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 	}
 }
 
+// 不需要进行保护
 func (iedh *InstanceEventDeferHandler) recover(evt discovery.KvEvent) {
 	key := util.BytesToStringWithNoCopy(evt.KV.Key)
 	delete(iedh.items, key)
 	iedh.deferCh <- evt
 }
 
+// 关闭 并重新创建items(之前的items可能会很大)
 func (iedh *InstanceEventDeferHandler) renew() {
 	iedh.enabled = false
 	iedh.items = make(map[string]*deferItem)
 }
 
+// 重置 开启状态设置关闭并丢弃现有的items数据
+// cache与etcd的数据对比
+// 如果cache与etcd数据一致就reset
+// 如果cache已经Dirty，被保护的数据也可能是dirty，也会被reset
 func (iedh *InstanceEventDeferHandler) Reset() bool {
 	if iedh.enabled {
 		iedh.resetCh <- struct{}{}

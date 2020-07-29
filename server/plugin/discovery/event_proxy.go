@@ -26,6 +26,7 @@ var (
 	// 不同类型的事件处理函数
 	eventProxies = make(map[Type]*KvEventProxy)
 )
+
 //事件的处理函数  这里的处理函数是暂存的
 //因为addOn的config可能还未创建
 //创建之后需要把这里的OnEvent添加到addOn的config中
@@ -33,12 +34,14 @@ type KvEventProxy struct {
 	evtHandleFuncs []KvEventFunc
 	lock           sync.RWMutex
 }
+
 // 添加事件处理函数
 func (h *KvEventProxy) AddHandleFunc(f KvEventFunc) {
 	h.lock.Lock()
 	h.evtHandleFuncs = append(h.evtHandleFuncs, f)
 	h.lock.Unlock()
 }
+
 // 顺序执行所有的处理函数
 func (h *KvEventProxy) OnEvent(evt KvEvent) {
 	h.lock.RLock()
@@ -71,7 +74,8 @@ func AddEventHandleFunc(t Type, f KvEventFunc) {
 	EventProxy(t).AddHandleFunc(f)
 	log.Infof("register event handle function[%s] %s", t, util.FuncName(f))
 }
-// 添加处理函数 struct类型
+
+// 添加处理函数 struct类型 /server/service/event会添加默认的处理函数
 func AddEventHandler(h KvEventHandler) {
 	EventProxy(h.Type()).AddHandleFunc(h.OnEvent)
 	log.Infof("register event handler[%s] %s", h.Type(), util.Reflect(h).Name())

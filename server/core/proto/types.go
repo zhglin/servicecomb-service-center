@@ -48,8 +48,9 @@ type ServerConfig struct {
 	AutoSyncInterval  string `json:"-"`
 	CompactIndexDelta int64  `json:"-"`
 	CompactInterval   string `json:"-"`
-
+	// 是否开启性能监控
 	EnablePProf bool `json:"enablePProf"`
+	// discovery 是否开启缓存
 	EnableCache bool `json:"enableCache"`
 
 	LogRotateSize   int64  `json:"-"`
@@ -62,6 +63,7 @@ type ServerConfig struct {
 	AccessLogFile   string `json:"-"`
 
 	PluginsDir string          `json:"-"`
+	// 这里会记录各个plugins的信息
 	Plugins    util.JSONObject `json:"plugins"`
 
 	SelfRegister bool `json:"selfRegister"`

@@ -24,11 +24,11 @@ import (
 
 const (
 	// force re-list
-	DefaultForceListInterval = 4
+	DefaultForceListInterval = 4  // 强制拉取全量数据的次数 watch次数
 	DefaultMetricsInterval   = 30 * time.Second
 
-	minWaitInterval = 1 * time.Second
-	eventBlockSize  = 1000
+	minWaitInterval = 1 * time.Second // 定时刷新cache时间间隔
+	eventBlockSize  = 1000 // 一次处理的最大事件数量
 	eventBusSize    = 1000
 )
 
@@ -37,7 +37,7 @@ var closedCh = make(chan struct{})
 func init() {
 	close(closedCh)
 }
-
+// etcd中数据转换成cache数据
 func FromEtcdKeyValue(dist *discovery.KeyValue, src *mvccpb.KeyValue, parser pb.Parser) (err error) {
 	dist.Key = src.Key
 	dist.Version = src.Version
@@ -46,6 +46,7 @@ func FromEtcdKeyValue(dist *discovery.KeyValue, src *mvccpb.KeyValue, parser pb.
 	if parser == nil {
 		return
 	}
+	// 解析数据值
 	dist.Value, err = parser.Unmarshal(src.Value)
 	return
 }

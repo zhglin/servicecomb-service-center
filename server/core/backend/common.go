@@ -25,10 +25,10 @@ import (
 const (
 	leaseProfTimeFmt           = "15:04:05.000"
 	eventBlockSize             = 1000
-	deferCheckWindow           = 2 * time.Second // instance DELETE event will be delay.
-	selfPreservationPercentage = 0.8
-	selfPreservationMaxTTL     = 10 * 60 // 10min
-	selfPreservationInitCount  = 5
+	deferCheckWindow           = 2 * time.Second // instance DELETE event will be delay. 处理被保护事件的事件间隔
+	selfPreservationPercentage = 0.8 // 触发自我保护的比例
+	selfPreservationMaxTTL     = 10 * 60 // 10min //最大保护时间
+	selfPreservationInitCount  = 5 //开启自我保护的最少数量
 )
 // discovery 管理的数据类型
 // 要先加载discovery 初始化好各个类型供其他子系统设置EventHandler

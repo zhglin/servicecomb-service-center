@@ -24,6 +24,7 @@ import (
 	"sync"
 )
 
+// 这里管理watch链接,cacher定时watch,watch的链接要能超时关闭
 type innerWatcher struct {
 	Cfg    ListWatchConfig
 	lw     ListWatch
@@ -33,34 +34,39 @@ type innerWatcher struct {
 	mux    sync.Mutex
 }
 
+// watch返回给外部
 func (w *innerWatcher) EventBus() <-chan *registry.PluginResponse {
 	return w.bus
 }
 
 func (w *innerWatcher) process(_ context.Context) {
 	stopCh := make(chan struct{})
+	// 设置watch链接的 链接时间
 	ctx, cancel := context.WithTimeout(w.Cfg.Context, w.Cfg.Timeout)
 	gopool.Go(func(_ context.Context) {
 		defer close(stopCh)
+		//DoWatch异常会return,ctx超时会return
 		w.lw.DoWatch(ctx, w.sendEvent)
 	})
 
 	select {
-	case <-stopCh:
+	case <-stopCh:	//主动取消
 		// timed out or exception
 		w.Stop()
 		cancel()
-	case <-w.stopCh:
+	case <-w.stopCh: // 上层的退出导致这里取消
 		cancel()
 	}
 
 }
 
+// watch回调函数 数据写入bug
 func (w *innerWatcher) sendEvent(resp *registry.PluginResponse) {
 	defer log.Recover()
 	w.bus <- resp
 }
 
+// 关闭
 func (w *innerWatcher) Stop() {
 	w.mux.Lock()
 	if w.stop {

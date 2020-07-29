@@ -42,6 +42,7 @@ func (i *CacheIndexer) Search(ctx context.Context, opts ...registry.PluginOpOpti
 	return
 }
 
+// 对key进行精确查找
 func (i *CacheIndexer) search(op registry.PluginOp) *Response {
 	resp := new(Response)
 
@@ -59,16 +60,19 @@ func (i *CacheIndexer) search(op registry.PluginOp) *Response {
 	return resp
 }
 
+// 对key进行前缀模糊查找
 func (i *CacheIndexer) searchByPrefix(op registry.PluginOp) *Response {
 	resp := new(Response)
 
 	prefix := util.BytesToStringWithNoCopy(op.Key)
 
+	// 先获取数量，不存在就退出
 	resp.Count = int64(i.Cache.GetPrefix(prefix, nil))
 	if resp.Count == 0 || op.CountOnly {
 		return resp
 	}
 
+	// 获取值
 	t := time.Now()
 	kvs := make([]*KeyValue, 0, resp.Count)
 	i.Cache.GetPrefix(prefix, &kvs)
@@ -79,6 +83,7 @@ func (i *CacheIndexer) searchByPrefix(op registry.PluginOp) *Response {
 }
 
 // Creditable implements discovery.Indexer.Creditable.
+// 是否可信
 func (i *CacheIndexer) Creditable() bool {
 	return true
 }

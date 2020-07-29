@@ -62,13 +62,13 @@ func RegisterType(name string) (newId Type, err error) {
 	typeNames = append(typeNames, name)
 	return
 }
-
+// 缓存中的数据
 type KeyValue struct {
 	Key            []byte
 	Value          interface{}
-	Version        int64
-	CreateRevision int64
-	ModRevision    int64
+	Version        int64 // 就是一个计数器，代表了 KeyValue 被修改了多少次
+	CreateRevision int64 // KeyValue 在创建的时候生成的版本号 revision
+	ModRevision    int64 // 数据被操作的时候对应的版本号 revision
 	ClusterName    string
 }
 
@@ -77,7 +77,7 @@ func (kv *KeyValue) String() string {
 	return fmt.Sprintf("{key: '%s', value: %s, version: %d, cluster: '%s'}",
 		util.BytesToStringWithNoCopy(kv.Key), util.BytesToStringWithNoCopy(b), kv.Version, kv.ClusterName)
 }
-
+// 创建cache的value
 func NewKeyValue() *KeyValue {
 	return &KeyValue{ClusterName: registry.Configuration().ClusterName}
 }
@@ -86,12 +86,12 @@ type Response struct {
 	Kvs   []*KeyValue
 	Count int64
 }
-
+// 事件
 type KvEvent struct {
-	Revision int64
-	Type     pb.EventType
-	KV       *KeyValue
-	CreateAt simple.Time
+	Revision int64	//版本号
+	Type     pb.EventType //事件类型
+	KV       *KeyValue    //数据
+	CreateAt simple.Time  //创建时间
 }
 // 事件处理函数
 type KvEventFunc func(evt KvEvent)
@@ -100,7 +100,7 @@ type KvEventHandler interface {
 	Type() Type	//数据类型
 	OnEvent(evt KvEvent) //处理函数 类型就是KvEventFunc
 }
-
+// 创建事件
 func NewKvEvent(action pb.EventType, kv *KeyValue, rev int64) KvEvent {
 	return KvEvent{Type: action, KV: kv, Revision: rev, CreateAt: simple.FromTime(time.Now())}
 }

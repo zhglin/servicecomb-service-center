@@ -248,6 +248,7 @@ func (s *RegistryEngine) heartBeatService() {
 			select {
 			case <-ctx.Done():
 				return
+				// 续约时间间隔
 			case <-time.After(time.Duration(core.Instance.HealthCheck.Interval) * time.Second):
 				s.sendHeartBeat(ctx)
 			}

@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	EVT_INIT   EventType = "INIT"
+	EVT_INIT   EventType = "INIT"	//初始化事件
 	EVT_CREATE EventType = "CREATE"
 	EVT_UPDATE EventType = "UPDATE"
-	EVT_DELETE EventType = "DELETE"
+	EVT_DELETE EventType = "DELETE"  //删除事件
 	EVT_EXPIRE EventType = "EXPIRE"
 	EVT_ERROR  EventType = "ERROR"
 	MS_UP      string    = "UP"
