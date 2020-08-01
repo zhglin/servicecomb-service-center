@@ -29,11 +29,13 @@ type ServiceHealthChecker struct {
 	Subscriber
 }
 
+// 健康检查的事件
 type ServiceHealthCheckJob struct {
 	Event
 	ErrorSubscriber Subscriber
 }
 
+// 健康检查事件的处理
 func (s *ServiceHealthChecker) OnMessage(job Event) {
 	j := job.(*ServiceHealthCheckJob)
 	err := j.ErrorSubscriber.Err()
@@ -44,17 +46,20 @@ func (s *ServiceHealthChecker) OnMessage(job Event) {
 		return
 	}
 
+	// 订阅者类型不是NOTIFTY就删除该订阅者
 	log.Debugf("notification service remove %s watcher, error: %v, subject: %s, group: %s",
 		j.ErrorSubscriber.Type(), err, j.ErrorSubscriber.Subject(), j.ErrorSubscriber.Group())
 	s.Service().RemoveSubscriber(j.ErrorSubscriber)
 }
 
+// 创建个健康检查的订阅者
 func NewNotifyServiceHealthChecker() *ServiceHealthChecker {
 	return &ServiceHealthChecker{
 		Subscriber: NewSubscriber(NOTIFTY, ServerCheckSubject, ServerCheckerName),
 	}
 }
 
+// 健康检查的订阅事件
 func NewNotifyServiceHealthCheckJob(s Subscriber) *ServiceHealthCheckJob {
 	return &ServiceHealthCheckJob{
 		Event:           NewEvent(NOTIFTY, ServerCheckSubject, ServerCheckerName),

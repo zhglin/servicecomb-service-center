@@ -21,8 +21,10 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/util"
 )
 
+// 订阅者组
 type Group struct {
-	name        string
+	name        string // 组名称
+	// 相同group的订阅者  订阅者id=>订阅者  一个group中多个订阅者
 	subscribers *util.ConcurrentMap
 }
 
@@ -30,6 +32,7 @@ func (g *Group) Name() string {
 	return g.name
 }
 
+// 调用订阅者的onMessage函数处理事件
 func (g *Group) Notify(job Event) {
 	g.subscribers.ForEach(func(item util.MapItem) (next bool) {
 		item.Value.(Subscriber).OnMessage(job)
@@ -37,6 +40,7 @@ func (g *Group) Notify(job Event) {
 	})
 }
 
+//获取指定的订阅者
 func (g *Group) Subscribers(name string) Subscriber {
 	s, ok := g.subscribers.Get(name)
 	if !ok {
@@ -45,14 +49,17 @@ func (g *Group) Subscribers(name string) Subscriber {
 	return s.(Subscriber)
 }
 
+// 在当前组中添加订阅者
 func (g *Group) AddSubscriber(subscriber Subscriber) Subscriber {
 	return g.subscribers.PutIfAbsent(subscriber.ID(), subscriber).(Subscriber)
 }
 
+//重组中删除name对应的订阅者
 func (g *Group) Remove(name string) {
 	g.subscribers.Remove(name)
 }
 
+// 当前组中的订阅者数量
 func (g *Group) Size() int {
 	return g.subscribers.Size()
 }

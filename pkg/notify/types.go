@@ -26,6 +26,7 @@ func (nt Type) String() string {
 	return "Type" + strconv.Itoa(int(nt))
 }
 
+// 获取type对应的queue长度
 func (nt Type) QueueSize() (s int) {
 	if nt.IsValid() {
 		s = typeQueues[nt]
@@ -36,14 +37,17 @@ func (nt Type) QueueSize() (s int) {
 	return
 }
 
+// 是否合法
 func (nt Type) IsValid() bool {
 	return nt >= 0 && int(nt) < len(typeQueues)
 }
 
+// 全部的notify类型
 var typeNames = []string{
 	NOTIFTY: "NOTIFTY",
 }
 
+//每中notify类型对应的queues长度
 var typeQueues = []int{
 	NOTIFTY: 0,
 }
@@ -55,6 +59,7 @@ func Types() (ts []Type) {
 	return
 }
 
+// 注册notify类型
 func RegisterType(name string, size int) Type {
 	l := len(typeNames)
 	typeNames = append(typeNames, name)

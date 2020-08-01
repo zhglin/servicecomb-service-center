@@ -22,28 +22,42 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/util"
 )
 
+//订阅者接口
 type Subscriber interface {
+	// 订阅者标识
 	ID() string
+	// 订阅的主题
 	Subject() string
+	// 订阅者所在组
 	Group() string
+	// notify类型
 	Type() Type
+	// notification_service 通过service操作所有的notify数据
 	Service() *Service
 	SetService(*Service)
 
 	Err() error
 	SetError(err error)
 
+	// 关闭
 	Close()
 	OnAccept()
 	// The event bus will callback this function, so it must be non-blocked.
+	// 事件的回调函数 上层同步调用
 	OnMessage(Event)
 }
 
+// 订阅者
 type baseSubscriber struct {
+	// notify类型
 	nType   Type
+	// 订阅者id
 	id      string
+	// 订阅主题
 	subject string
+	// 主题组
 	group   string
+	// notifyService
 	service *Service
 	err     error
 }
@@ -62,6 +76,7 @@ func (s *baseSubscriber) OnMessage(job Event) {
 	s.SetError(errors.New("do not call base notifier OnMessage method"))
 }
 
+// 创建订阅者 消费消息
 func NewSubscriber(nType Type, subject, group string) Subscriber {
 	return &baseSubscriber{
 		id:      util.GenerateUUID(),

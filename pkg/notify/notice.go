@@ -22,15 +22,17 @@ import (
 	"time"
 )
 
+// 事件接口
 type Event interface {
+	// notify.type类型,区分processor
 	Type() Type
-	Subject() string // required!
-	Group() string   // broadcast all the subscriber of the same subject if group is empty
-	CreateAt() time.Time
+	Subject() string // 当前事件对应的主题 required!
+	Group() string   // 当前事件对应的组，不填就通知所有主题下的订阅者，broadcast all the subscriber of the same subject if group is empty
+	CreateAt() time.Time // 创建时间
 }
 
 type baseEvent struct {
-	nType    Type
+	nType    Type	//notify 类型
 	subject  string
 	group    string
 	createAt simple.Time
