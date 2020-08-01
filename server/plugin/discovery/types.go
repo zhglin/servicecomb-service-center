@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	simple "github.com/apache/servicecomb-service-center/pkg/time"
+	"github.com/apache/servicecomb-service-center/pkg/types"
 	"github.com/apache/servicecomb-service-center/pkg/util"
-	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 	"github.com/apache/servicecomb-service-center/server/plugin/registry"
 	"strconv"
 	"time"
@@ -88,10 +88,10 @@ type Response struct {
 }
 // 事件
 type KvEvent struct {
-	Revision int64	//版本号
-	Type     pb.EventType //事件类型
-	KV       *KeyValue    //数据
-	CreateAt simple.Time  //创建时间
+	Revision int64 //版本号
+	Type     types.EventType //事件类型
+	KV       *KeyValue //数据
+	CreateAt simple.Time //创建时间
 }
 // 事件处理函数
 type KvEventFunc func(evt KvEvent)
@@ -100,7 +100,8 @@ type KvEventHandler interface {
 	Type() Type	//数据类型
 	OnEvent(evt KvEvent) //处理函数 类型就是KvEventFunc
 }
+
 // 创建事件
-func NewKvEvent(action pb.EventType, kv *KeyValue, rev int64) KvEvent {
+func NewKvEvent(action types.EventType, kv *KeyValue, rev int64) KvEvent {
 	return KvEvent{Type: action, KV: kv, Revision: rev, CreateAt: simple.FromTime(time.Now())}
 }

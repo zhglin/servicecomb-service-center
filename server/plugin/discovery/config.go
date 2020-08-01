@@ -18,7 +18,7 @@ package discovery
 
 import (
 	"fmt"
-	pb "github.com/apache/servicecomb-service-center/server/core/proto"
+	"github.com/apache/servicecomb-service-center/server/core/proto"
 	"time"
 )
 //addOn配置
@@ -36,7 +36,7 @@ type Config struct {
 	// 事件处理链
 	OnEvent      KvEventFunc
 	// 从etcd获取的数据进行解析的函数
-	Parser       pb.Parser
+	Parser       proto.Parser
 }
 
 func (cfg *Config) String() string {
@@ -89,7 +89,7 @@ func (cfg *Config) AppendEventFunc(f KvEventFunc) *Config {
 }
 
 // 数据的json解析函数
-func (cfg *Config) WithParser(parser pb.Parser) *Config {
+func (cfg *Config) WithParser(parser proto.Parser) *Config {
 	cfg.Parser = parser
 	return cfg
 }
@@ -100,6 +100,6 @@ func Configure() *Config {
 		Timeout:  DefaultTimeout,
 		Period:   time.Second,
 		InitSize: DefaultCacheInitSize,
-		Parser:   pb.BytesParser,
+		Parser:   proto.BytesParser,
 	}
 }

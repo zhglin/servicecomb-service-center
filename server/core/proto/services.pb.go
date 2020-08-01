@@ -19,6 +19,7 @@ package proto
 
 import (
 	"context"
+	"github.com/apache/servicecomb-service-center/pkg/registry"
 	"google.golang.org/grpc"
 )
 
@@ -569,50 +570,51 @@ type GetAppsResponse struct {
 	Response *Response `protobuf:"bytes,1,opt,name=response" json:"response,omitempty"`
 	AppIds   []string  `protobuf:"bytes,2,rep,name=appIds" json:"appIds,omitempty"`
 }
+
 type ServiceCtrlServer interface {
-	Exist(context.Context, *GetExistenceRequest) (*GetExistenceResponse, error)
-	Create(context.Context, *CreateServiceRequest) (*CreateServiceResponse, error)
-	Delete(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error)
-	GetOne(context.Context, *GetServiceRequest) (*GetServiceResponse, error)
-	GetServices(context.Context, *GetServicesRequest) (*GetServicesResponse, error)
-	UpdateProperties(context.Context, *UpdateServicePropsRequest) (*UpdateServicePropsResponse, error)
-	AddRule(context.Context, *AddServiceRulesRequest) (*AddServiceRulesResponse, error)
-	GetRule(context.Context, *GetServiceRulesRequest) (*GetServiceRulesResponse, error)
-	UpdateRule(context.Context, *UpdateServiceRuleRequest) (*UpdateServiceRuleResponse, error)
-	DeleteRule(context.Context, *DeleteServiceRulesRequest) (*DeleteServiceRulesResponse, error)
-	AddTags(context.Context, *AddServiceTagsRequest) (*AddServiceTagsResponse, error)
-	GetTags(context.Context, *GetServiceTagsRequest) (*GetServiceTagsResponse, error)
-	UpdateTag(context.Context, *UpdateServiceTagRequest) (*UpdateServiceTagResponse, error)
-	DeleteTags(context.Context, *DeleteServiceTagsRequest) (*DeleteServiceTagsResponse, error)
-	GetSchemaInfo(context.Context, *GetSchemaRequest) (*GetSchemaResponse, error)
-	GetAllSchemaInfo(context.Context, *GetAllSchemaRequest) (*GetAllSchemaResponse, error)
-	DeleteSchema(context.Context, *DeleteSchemaRequest) (*DeleteSchemaResponse, error)
-	ModifySchema(context.Context, *ModifySchemaRequest) (*ModifySchemaResponse, error)
-	ModifySchemas(context.Context, *ModifySchemasRequest) (*ModifySchemasResponse, error)
-	AddDependenciesForMicroServices(context.Context, *AddDependenciesRequest) (*AddDependenciesResponse, error)
-	CreateDependenciesForMicroServices(context.Context, *CreateDependenciesRequest) (*CreateDependenciesResponse, error)
-	GetProviderDependencies(context.Context, *GetDependenciesRequest) (*GetProDependenciesResponse, error)
-	GetConsumerDependencies(context.Context, *GetDependenciesRequest) (*GetConDependenciesResponse, error)
-	DeleteServices(context.Context, *DelServicesRequest) (*DelServicesResponse, error)
+	Exist(context.Context, *registry.GetExistenceRequest) (*registry.GetExistenceResponse, error)
+	Create(context.Context, *registry.CreateServiceRequest) (*registry.CreateServiceResponse, error)
+	Delete(context.Context, *registry.DeleteServiceRequest) (*registry.DeleteServiceResponse, error)
+	GetOne(context.Context, *registry.GetServiceRequest) (*registry.GetServiceResponse, error)
+	GetServices(context.Context, *registry.GetServicesRequest) (*registry.GetServicesResponse, error)
+	UpdateProperties(context.Context, *registry.UpdateServicePropsRequest) (*registry.UpdateServicePropsResponse, error)
+	AddRule(context.Context, *registry.AddServiceRulesRequest) (*registry.AddServiceRulesResponse, error)
+	GetRule(context.Context, *registry.GetServiceRulesRequest) (*registry.GetServiceRulesResponse, error)
+	UpdateRule(context.Context, *registry.UpdateServiceRuleRequest) (*registry.UpdateServiceRuleResponse, error)
+	DeleteRule(context.Context, *registry.DeleteServiceRulesRequest) (*registry.DeleteServiceRulesResponse, error)
+	AddTags(context.Context, *registry.AddServiceTagsRequest) (*registry.AddServiceTagsResponse, error)
+	GetTags(context.Context, *registry.GetServiceTagsRequest) (*registry.GetServiceTagsResponse, error)
+	UpdateTag(context.Context, *registry.UpdateServiceTagRequest) (*registry.UpdateServiceTagResponse, error)
+	DeleteTags(context.Context, *registry.DeleteServiceTagsRequest) (*registry.DeleteServiceTagsResponse, error)
+	GetSchemaInfo(context.Context, *registry.GetSchemaRequest) (*registry.GetSchemaResponse, error)
+	GetAllSchemaInfo(context.Context, *registry.GetAllSchemaRequest) (*registry.GetAllSchemaResponse, error)
+	DeleteSchema(context.Context, *registry.DeleteSchemaRequest) (*registry.DeleteSchemaResponse, error)
+	ModifySchema(context.Context, *registry.ModifySchemaRequest) (*registry.ModifySchemaResponse, error)
+	ModifySchemas(context.Context, *registry.ModifySchemasRequest) (*registry.ModifySchemasResponse, error)
+	AddDependenciesForMicroServices(context.Context, *registry.AddDependenciesRequest) (*registry.AddDependenciesResponse, error)
+	CreateDependenciesForMicroServices(context.Context, *registry.CreateDependenciesRequest) (*registry.CreateDependenciesResponse, error)
+	GetProviderDependencies(context.Context, *registry.GetDependenciesRequest) (*registry.GetProDependenciesResponse, error)
+	GetConsumerDependencies(context.Context, *registry.GetDependenciesRequest) (*registry.GetConDependenciesResponse, error)
+	DeleteServices(context.Context, *registry.DelServicesRequest) (*registry.DelServicesResponse, error)
 }
 type ServiceInstanceCtrlServer interface {
-	Register(context.Context, *RegisterInstanceRequest) (*RegisterInstanceResponse, error)
-	Unregister(context.Context, *UnregisterInstanceRequest) (*UnregisterInstanceResponse, error)
-	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
-	Find(context.Context, *FindInstancesRequest) (*FindInstancesResponse, error)
-	GetInstances(context.Context, *GetInstancesRequest) (*GetInstancesResponse, error)
-	GetOneInstance(context.Context, *GetOneInstanceRequest) (*GetOneInstanceResponse, error)
-	UpdateStatus(context.Context, *UpdateInstanceStatusRequest) (*UpdateInstanceStatusResponse, error)
-	UpdateInstanceProperties(context.Context, *UpdateInstancePropsRequest) (*UpdateInstancePropsResponse, error)
-	Watch(*WatchInstanceRequest, ServiceInstanceCtrl_WatchServer) error
-	HeartbeatSet(context.Context, *HeartbeatSetRequest) (*HeartbeatSetResponse, error)
+	Register(context.Context, *registry.RegisterInstanceRequest) (*registry.RegisterInstanceResponse, error)
+	Unregister(context.Context, *registry.UnregisterInstanceRequest) (*registry.UnregisterInstanceResponse, error)
+	Heartbeat(context.Context, *registry.HeartbeatRequest) (*registry.HeartbeatResponse, error)
+	Find(context.Context, *registry.FindInstancesRequest) (*registry.FindInstancesResponse, error)
+	GetInstances(context.Context, *registry.GetInstancesRequest) (*registry.GetInstancesResponse, error)
+	GetOneInstance(context.Context, *registry.GetOneInstanceRequest) (*registry.GetOneInstanceResponse, error)
+	UpdateStatus(context.Context, *registry.UpdateInstanceStatusRequest) (*registry.UpdateInstanceStatusResponse, error)
+	UpdateInstanceProperties(context.Context, *registry.UpdateInstancePropsRequest) (*registry.UpdateInstancePropsResponse, error)
+	Watch(*registry.WatchInstanceRequest, ServiceInstanceCtrl_WatchServer) error
+	HeartbeatSet(context.Context, *registry.HeartbeatSetRequest) (*registry.HeartbeatSetResponse, error)
 }
 type ServiceInstanceCtrl_WatchServer interface {
-	Send(*WatchInstanceResponse) error
+	Send(*registry.WatchInstanceResponse) error
 	grpc.ServerStream
 }
 type GovernServiceCtrlServer interface {
-	GetServiceDetail(context.Context, *GetServiceRequest) (*GetServiceDetailResponse, error)
-	GetServicesInfo(context.Context, *GetServicesInfoRequest) (*GetServicesInfoResponse, error)
-	GetApplications(context.Context, *GetAppsRequest) (*GetAppsResponse, error)
+	GetServiceDetail(context.Context, *registry.GetServiceRequest) (*registry.GetServiceDetailResponse, error)
+	GetServicesInfo(context.Context, *registry.GetServicesInfoRequest) (*registry.GetServicesInfoResponse, error)
+	GetApplications(context.Context, *registry.GetAppsRequest) (*registry.GetAppsResponse, error)
 }

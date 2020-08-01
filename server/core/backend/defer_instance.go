@@ -21,8 +21,8 @@ import (
 	"context"
 	"github.com/apache/servicecomb-service-center/pkg/gopool"
 	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/registry"
 	"github.com/apache/servicecomb-service-center/pkg/util"
-	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 	"github.com/apache/servicecomb-service-center/server/plugin/discovery"
 	"sync"
 	"time"
@@ -84,18 +84,18 @@ func (iedh *InstanceEventDeferHandler) recoverOrDefer(evt discovery.KvEvent) {
 	_, ok := iedh.items[key]
 	switch evt.Type {
 	// 添加 修改事件 直接recover
-	case pb.EVT_CREATE, pb.EVT_UPDATE:
+	case registry.EVT_CREATE, registry.EVT_UPDATE:
 		if ok {
 			log.Infof("recovered key %s events", key)
 			// return nil // no need to publish event to subscribers?
 		}
 		iedh.recover(evt)
-	case pb.EVT_DELETE:
+	case registry.EVT_DELETE:
 		if ok {
 			return
 		}
 
-		instance := kv.Value.(*pb.MicroServiceInstance)
+		instance := kv.Value.(*registry.MicroServiceInstance)
 		if instance == nil {
 			log.Errorf(nil, "defer or recover a %s nil Value, KV is %v", evt.Type, kv)
 			return
