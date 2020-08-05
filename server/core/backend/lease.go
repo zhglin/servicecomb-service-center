@@ -37,6 +37,7 @@ type LeaseTask struct {
 	TTL     int64
 	// 创建时间
 	recvTime simple.Time
+	// 最近一次执行的err
 	err      error
 }
 

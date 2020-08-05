@@ -25,14 +25,17 @@ import (
 	"strings"
 )
 
+//具体的版本比较函数
 type VersionRule func(sorted []string, kvs map[string]*discovery.KeyValue, start, end string) []string
 
+// 通用的排序
 func (vr VersionRule) Match(kvs []*discovery.KeyValue, ops ...string) []string {
 	sorter := &serviceKeySorter{
 		sortArr: make([]string, len(kvs)),
 		kvs:     make(map[string]*discovery.KeyValue, len(kvs)),
-		cmp:     Larger,
+		cmp:     Larger, // 倒序排列
 	}
+	// 处理输入参数中的kvs,转换成sorter
 	for i, kv := range kvs {
 		key := util.BytesToStringWithNoCopy(kv.Key)
 		ver := key[strings.LastIndex(key, "/")+1:]
@@ -45,13 +48,16 @@ func (vr VersionRule) Match(kvs []*discovery.KeyValue, ops ...string) []string {
 	switch {
 	case len(ops) > 1:
 		args[1] = ops[1]
-		fallthrough
+		fallthrough // 强制执行下面的逻辑
 	case len(ops) > 0:
 		args[0] = ops[0]
 	}
+
+	// 具体的匹配函数
 	return vr(sorter.sortArr, sorter.kvs, args[0], args[1])
 }
 
+// service的排序比较
 type serviceKeySorter struct {
 	sortArr []string
 	kvs     map[string]*discovery.KeyValue
@@ -70,6 +76,7 @@ func (sks *serviceKeySorter) Less(i, j int) bool {
 	return sks.cmp(sks.sortArr[i], sks.sortArr[j])
 }
 
+// 版本号string类型转换成int类型,以.分割每段都转换成int16,最后整体转换成int64
 func VersionToInt64(versionStr string) (ret int64, err error) {
 	verBytes := [4]int16{}
 	idx := 0
@@ -89,6 +96,7 @@ func VersionToInt64(versionStr string) (ret int64, err error) {
 	return
 }
 
+// service的version比较函数 用来排序
 func Larger(start, end string) bool {
 	s, _ := VersionToInt64(start)
 	e, _ := VersionToInt64(end)
@@ -99,6 +107,7 @@ func LessEqual(start, end string) bool {
 	return !Larger(start, end)
 }
 
+// 最高版本
 func Latest(sorted []string, kvs map[string]*discovery.KeyValue, start, end string) []string {
 	if len(sorted) == 0 {
 		return []string{}
@@ -106,21 +115,24 @@ func Latest(sorted []string, kvs map[string]*discovery.KeyValue, start, end stri
 	return []string{kvs[sorted[0]].Value.(string)}
 }
 
+//取版本范围集合 包含start 包含end
 func Range(sorted []string, kvs map[string]*discovery.KeyValue, start, end string) []string {
 	result := make([]string, len(sorted))
 	i, flag := 0, 0
 
+	// start > end 交换下
 	if Larger(start, end) {
 		start, end = end, start
 	}
 
 	l := len(sorted)
+	// start > 最大的版本  || end < 最小版本
 	if l == 0 || Larger(start, sorted[0]) || LessEqual(end, sorted[l-1]) {
 		return []string{}
 	}
 
 	for _, k := range sorted {
-		// end >= k >= start
+		// end >= k >= start 5 4 3 2 1
 		switch flag {
 		case 0:
 			if LessEqual(end, k) {
@@ -139,6 +151,7 @@ func Range(sorted []string, kvs map[string]*discovery.KeyValue, start, end strin
 	return result[:i]
 }
 
+// 取最低版本及高版本集合  包含start
 func AtLess(sorted []string, kvs map[string]*discovery.KeyValue, start, end string) []string {
 	result := make([]string, len(sorted))
 
@@ -155,6 +168,7 @@ func AtLess(sorted []string, kvs map[string]*discovery.KeyValue, start, end stri
 	return result[:]
 }
 
+// 版本匹配规则 返回具体的版本比较函数
 func ParseVersionRule(versionRule string) func(kvs []*discovery.KeyValue) []string {
 	if len(versionRule) == 0 {
 		return nil
@@ -163,7 +177,9 @@ func ParseVersionRule(versionRule string) func(kvs []*discovery.KeyValue) []stri
 	rangeIdx := strings.Index(versionRule, "-")
 	switch {
 	case versionRule == "latest":
+		// 最高版本
 		return func(kvs []*discovery.KeyValue) []string {
+			// VersionRule(Latest) 类型转换
 			return VersionRule(Latest).Match(kvs)
 		}
 	case versionRule[len(versionRule)-1:] == "+":
@@ -185,6 +201,7 @@ func ParseVersionRule(versionRule string) func(kvs []*discovery.KeyValue) []stri
 	}
 }
 
+// 指定版本进行比较
 func VersionMatchRule(version string, versionRule string) bool {
 	match := ParseVersionRule(versionRule)
 	if match == nil {

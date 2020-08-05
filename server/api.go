@@ -155,6 +155,7 @@ func (s *APIServer) Start() {
 
 	defer log.Info("api server is ready")
 
+	// 不需要自注册
 	if !core.ServerInfo.Config.SelfRegister {
 		log.Warnf("self register disabled")
 		return

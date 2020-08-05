@@ -43,17 +43,21 @@ import (
 )
 
 var (
+	// 全局统一的etcd ttl
 	ttlFromEnv, _ = strconv.ParseInt(os.Getenv("INSTANCE_TTL"), 10, 0)
 )
 
 type InstanceService struct {
 }
 
+// 注册之前的预处理
 func (s *InstanceService) preProcessRegisterInstance(ctx context.Context, instance *pb.MicroServiceInstance) *scerr.Error {
+	// 设置节点状态可用
 	if len(instance.Status) == 0 {
 		instance.Status = pb.MSI_UP
 	}
 
+	// 生成instanceId
 	if len(instance.InstanceId) == 0 {
 		instance.InstanceId = plugin.Plugins().UUID().GetInstanceID(ctx)
 	}
@@ -64,6 +68,8 @@ func (s *InstanceService) preProcessRegisterInstance(ctx context.Context, instan
 	// 这里应该根据租约计时
 	renewalInterval := apt.RegistryDefaultLeaseRenewalinterval
 	retryTimes := apt.RegistryDefaultLeaseRetrytimes
+
+	// 设置续约相关信息
 	if instance.HealthCheck == nil {
 		instance.HealthCheck = &pb.HealthCheck{
 			Mode:     pb.CHECK_BY_HEARTBEAT,
@@ -73,7 +79,7 @@ func (s *InstanceService) preProcessRegisterInstance(ctx context.Context, instan
 	} else {
 		// Health check对象仅用于呈现服务健康检查逻辑，如果CHECK_BY_PLATFORM类型，表明由sidecar代发心跳，实例120s超时
 		switch instance.HealthCheck.Mode {
-		case pb.CHECK_BY_HEARTBEAT:
+		case pb.CHECK_BY_HEARTBEAT: //自己处理心跳 校验下配置的时间
 			d := instance.HealthCheck.Interval * (instance.HealthCheck.Times + 1)
 			if d <= 0 {
 				return scerr.NewError(scerr.ErrInvalidParams, "Invalid 'healthCheck' settings in request body.")
@@ -94,6 +100,7 @@ func (s *InstanceService) preProcessRegisterInstance(ctx context.Context, instan
 	return nil
 }
 
+// 注册instance节点
 func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceRequest) (*pb.RegisterInstanceResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 
@@ -106,7 +113,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 
 	instance := in.Instance
 
-	//允许自定义id
+	//允许自定义id 如果存在instanceId 续约
 	if len(instance.InstanceId) > 0 {
 		// keep alive the lease ttl
 		// there are two reasons for sending a heartbeat here:
@@ -114,9 +121,11 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 		//    the cast of registration operation can be reduced.
 		// 2. in the self-protection scenario, the instance is unhealthy
 		//    and needs to be re-registered.
+		// 1。在该场景中，实例已被删除，可以减少注册操作的cast。
+		// 2。在自我保护场景中，该实例不健康，需要重新注册。
 		resp, err := s.Heartbeat(ctx, &pb.HeartbeatRequest{ServiceId: instance.ServiceId, InstanceId: instance.InstanceId})
 		switch resp.Response.GetCode() {
-		case proto.Response_SUCCESS:
+		case proto.Response_SUCCESS: // 续约成功
 			log.Infof("register instance successful, reuse instance[%s/%s], operator %s",
 				instance.ServiceId, instance.InstanceId, remoteIP)
 			return &pb.RegisterInstanceResponse{
@@ -134,6 +143,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 		}
 	}
 
+	// 预处理instance  (instanceId,HealthCheck,Timestamp,ModTimestamp,Status)
 	if err := s.preProcessRegisterInstance(ctx, instance); err != nil {
 		log.Errorf(err, "register service[%s]'s instance failed, endpoints %v, host '%s', operator %s",
 			instance.ServiceId, instance.Endpoints, instance.HostName, remoteIP)
@@ -141,6 +151,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 			Response: proto.CreateResponseWithSCErr(err),
 		}, nil
 	}
+
 	// etcd租约过期时间
 	ttl := int64(instance.HealthCheck.Interval * (instance.HealthCheck.Times + 1))
 	if ttlFromEnv > 0 {
@@ -153,6 +164,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 	domainProject := util.ParseDomainProject(ctx)
 
 	var reporter *quota.ApplyQuotaResult
+	// 不是service_center节点 配额
 	if !apt.IsSCInstance(ctx) {
 		res := quota.NewApplyQuotaResource(quota.MicroServiceInstanceQuotaType,
 			domainProject, in.Instance.ServiceId, 1)
@@ -183,6 +195,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 		}, err
 	}
 
+	// 获取租约id
 	leaseID, err := backend.Registry().LeaseGrant(ctx, ttl)
 	if err != nil {
 		log.Errorf(err, "grant lease failed, %s, operator: %s", instanceFlag, remoteIP)
@@ -192,7 +205,9 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 	}
 
 	// build the request options
+	// instance key
 	key := apt.GenerateInstanceKey(domainProject, instance.ServiceId, instanceID)
+	//  lease key
 	hbKey := apt.GenerateInstanceLeaseKey(domainProject, instance.ServiceId, instanceID)
 
 	opts := []registry.PluginOp{
@@ -202,6 +217,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 			registry.WithLease(leaseID)),
 	}
 
+	// 事务操作 service的version != 0 保证serviceId对应的service存在
 	resp, err := backend.Registry().TxnWithCmp(ctx, opts,
 		[]registry.CompareOp{registry.OpCmp(
 			registry.CmpVer(util.StringToBytesWithNoCopy(apt.GenerateServiceKey(domainProject, instance.ServiceId))),
@@ -291,6 +307,7 @@ func revokeInstance(ctx context.Context, domainProject string, serviceID string,
 	return nil
 }
 
+// 续约接口
 func (s *InstanceService) Heartbeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 
@@ -303,7 +320,7 @@ func (s *InstanceService) Heartbeat(ctx context.Context, in *pb.HeartbeatRequest
 
 	domainProject := util.ParseDomainProject(ctx)
 	instanceFlag := util.StringJoin([]string{in.ServiceId, in.InstanceId}, "/")
-
+	// 续约
 	_, ttl, err := serviceUtil.HeartbeatUtil(ctx, domainProject, in.ServiceId, in.InstanceId)
 	if err != nil {
 		log.Errorf(err, "heartbeat failed, instance[%s]. operator %s",

@@ -42,6 +42,7 @@ const (
 	MaxTxnNumberOneTime = 128
 )
 
+// 创建register组件
 func NewEngine() (*RegistryEngine, error) {
 	instance := plugin.Plugins().Registry()
 	if instance == nil {
@@ -63,6 +64,7 @@ func Registry() registry.Registry {
 	return GetRegistryEngine()
 }
 
+// 获取register组件
 func GetRegistryEngine() *RegistryEngine {
 	if engineInstance == nil {
 		singletonLock.Lock()
@@ -112,11 +114,13 @@ func BatchCommitWithCmp(ctx context.Context, opts []registry.PluginOp,
 	return
 }
 
+// register plug
 type RegistryEngine struct {
 	registry.Registry
 	goroutine *gopool.Pool
 }
 
+// 启动当前service_center节点
 func (s *RegistryEngine) Start() error {
 	err := s.selfRegister(context.Background())
 	if err != nil {
@@ -138,6 +142,7 @@ func (s *RegistryEngine) Stop() {
 	}
 }
 
+// 自注册
 func (s *RegistryEngine) selfRegister(ctx context.Context) error {
 	err := s.registryService(context.Background())
 	if err != nil {
@@ -147,15 +152,19 @@ func (s *RegistryEngine) selfRegister(ctx context.Context) error {
 	return s.registryInstance(context.Background())
 }
 
+// 注册当前service_center
 func (s *RegistryEngine) registryService(pCtx context.Context) error {
 	ctx := core.AddDefaultContextValue(pCtx)
+	// 校验服务存不存在
 	respE, err := core.ServiceAPI.Exist(ctx, core.GetExistenceRequest())
 	if err != nil {
 		log.Error("query service center existence failed", err)
 		return err
 	}
+	// ServiceIndex存在
 	if respE.Response.GetCode() == proto.Response_SUCCESS {
 		log.Warnf("service center service[%s] already registered", respE.ServiceId)
+		// Service不存在，不会进行重新注册
 		respG, err := core.ServiceAPI.GetOne(ctx, core.GetServiceRequest(respE.ServiceId))
 		if respG.Response.GetCode() != proto.Response_SUCCESS {
 			log.Errorf(err, "query service center service[%s] info failed", respE.ServiceId)
@@ -165,6 +174,7 @@ func (s *RegistryEngine) registryService(pCtx context.Context) error {
 		return nil
 	}
 
+	// 新建服务
 	respS, err := core.ServiceAPI.Create(ctx, core.CreateServiceRequest())
 	if err != nil {
 		log.Error("register service center failed", err)
@@ -175,12 +185,14 @@ func (s *RegistryEngine) registryService(pCtx context.Context) error {
 	return nil
 }
 
+// 注册当前实例
 func (s *RegistryEngine) registryInstance(pCtx context.Context) error {
 	core.Instance.InstanceId = ""
 	core.Instance.ServiceId = core.Service.ServiceId
 
 	ctx := core.AddDefaultContextValue(pCtx)
 
+	// 注册
 	respI, err := core.InstanceAPI.Register(ctx, core.RegisterInstanceRequest())
 	if err != nil {
 		log.Error("register failed", err)

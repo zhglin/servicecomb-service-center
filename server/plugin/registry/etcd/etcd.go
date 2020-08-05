@@ -183,10 +183,12 @@ func (c *Client) Close() {
 	log.Debugf("etcd client stopped")
 }
 
+// 压缩
 func (c *Client) Compact(ctx context.Context, reserve int64) error {
 	eps := c.Client.Endpoints()
 	curRev := c.getLeaderCurrentRevision(ctx)
 
+	// 压缩的起始版本号
 	revToCompact := max(0, curRev-reserve)
 	if revToCompact <= 0 {
 		log.Infof("revision is %d, <=%d, no nead to compact %s", curRev, reserve, eps)
@@ -204,6 +206,8 @@ func (c *Client) Compact(ctx context.Context, reserve int64) error {
 	log.InfoOrWarnf(t, "compacted %s, revision is %d(current: %d, reserve %d)", eps, revToCompact, curRev, reserve)
 
 	// TODO can not defrag! because backend will always be unavailable when space in used is too large.
+	// 对指定的节点进行碎片整理，在压缩键空间之后，后端数据库可能呈现内部碎片，需进行整理
+	// 整理碎片是一个“昂贵”的操作，应避免同时对多个节点进行整理，因为当所使用的空间太大时，后端总是不可用
 	/*for _, ep := range eps {
 		t = time.Now()
 		_, err := c.Client.Defragment(ctx, ep)
@@ -217,6 +221,7 @@ func (c *Client) Compact(ctx context.Context, reserve int64) error {
 	return nil
 }
 
+// 获取etcd最新的版本号
 func (c *Client) getLeaderCurrentRevision(ctx context.Context) int64 {
 	eps := c.Client.Endpoints()
 	curRev := int64(0)
@@ -546,6 +551,7 @@ func (c *Client) Txn(ctx context.Context, opts []registry.PluginOp) (*registry.P
 	}, nil
 }
 
+// etcd 事务操作
 func (c *Client) TxnWithCmp(ctx context.Context, success []registry.PluginOp, cmps []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
 	var err error
 
@@ -627,6 +633,7 @@ func (c *Client) LeaseGrant(ctx context.Context, TTL int64) (int64, error) {
 	return int64(etcdResp.ID), nil
 }
 
+// etcd续约
 func (c *Client) LeaseRenew(ctx context.Context, leaseID int64) (int64, error) {
 	var err error
 
@@ -642,9 +649,11 @@ func (c *Client) LeaseRenew(ctx context.Context, leaseID int64) (int64, error) {
 
 	etcdResp, err := c.Client.KeepAliveOnce(otCtx, clientv3.LeaseID(leaseID))
 	if err != nil {
+		// etcd异常
 		if err.Error() == rpctypes.ErrLeaseNotFound.Error() {
 			return 0, err
 		}
+		// 转成内部异常
 		return 0, errorsEx.RaiseError(err)
 	}
 	log.NilOrWarnf(start, "registry client renew lease %d", leaseID)

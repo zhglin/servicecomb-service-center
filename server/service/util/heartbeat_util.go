@@ -25,11 +25,14 @@ import (
 	scerr "github.com/apache/servicecomb-service-center/server/scerror"
 )
 
+// 获取租约id进行续租
 func HeartbeatUtil(ctx context.Context, domainProject string, serviceID string, instanceID string) (leaseID int64, ttl int64, _ *scerr.Error) {
+	// 获取租约id
 	leaseID, err := GetLeaseID(ctx, domainProject, serviceID, instanceID)
 	if err != nil {
 		return leaseID, ttl, scerr.NewError(scerr.ErrUnavailableBackend, err.Error())
 	}
+	// 续租
 	ttl, err = KeepAliveLease(ctx, domainProject, serviceID, instanceID, leaseID)
 	if err != nil {
 		return leaseID, ttl, scerr.NewError(scerr.ErrInstanceNotExists, err.Error())
@@ -37,6 +40,7 @@ func HeartbeatUtil(ctx context.Context, domainProject string, serviceID string, 
 	return leaseID, ttl, nil
 }
 
+// 续租
 func KeepAliveLease(ctx context.Context, domainProject, serviceID, instanceID string, leaseID int64) (ttl int64, err error) {
 	if leaseID == -1 {
 		return ttl, errors.New("leaseId not exist, instance not exist")

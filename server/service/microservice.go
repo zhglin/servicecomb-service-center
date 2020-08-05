@@ -365,6 +365,7 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 	return proto.CreateResponse(proto.Response_SUCCESS, "Unregister service successfully."), nil
 }
 
+// 删除指定service
 func (s *MicroServiceService) Delete(ctx context.Context, in *pb.DeleteServiceRequest) (*pb.DeleteServiceResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -473,6 +474,7 @@ func (s *MicroServiceService) getDeleteServiceFunc(ctx context.Context, serviceI
 	}
 }
 
+// 根据serviceId获取service信息
 func (s *MicroServiceService) GetOne(ctx context.Context, in *pb.GetServiceRequest) (*pb.GetServiceResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -586,6 +588,7 @@ func (s *MicroServiceService) UpdateProperties(ctx context.Context, in *pb.Updat
 	}, nil
 }
 
+// 服务是否存在
 func (s *MicroServiceService) Exist(ctx context.Context, in *pb.GetExistenceRequest) (*pb.GetExistenceResponse, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	switch in.Type {

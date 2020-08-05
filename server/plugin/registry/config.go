@@ -37,6 +37,7 @@ type Config struct {
 	ClusterAddresses string         `json:"manageClusters,omitempty"` // the raw string of cluster configuration
 	Clusters         types.Clusters `json:"-"`                        // parsed from ClusterAddresses
 	DialTimeout      time.Duration  `json:"connectTimeout"`
+	// etcd请求超时时间
 	RequestTimeOut   time.Duration  `json:"registryTimeout"`
 	AutoSyncInterval time.Duration  `json:"autoSyncInterval"`
 }

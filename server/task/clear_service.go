@@ -40,6 +40,7 @@ func ClearNoInstanceServices(serviceTTL time.Duration) error {
 		log.Info("no service found, no need to clear")
 		return nil
 	}
+	// 清理的起始时间
 	timeLimit := time.Now().Add(0 - serviceTTL)
 	log.Infof("clear no-instance services created before %s", timeLimit)
 	timeLimitStamp := strconv.FormatInt(timeLimit.Unix(), 10)
@@ -57,6 +58,7 @@ func ClearNoInstanceServices(serviceTTL time.Duration) error {
 			if svc == nil {
 				continue
 			}
+			// 判断能不能被清理
 			ok, err := shouldClear(ctx, timeLimitStamp, svc)
 			if err != nil {
 				log.Errorf(err, "check service clear necessity failed")
@@ -71,8 +73,10 @@ func ClearNoInstanceServices(serviceTTL time.Duration) error {
 				"service: " + util.StringJoin([]string{svc.AppId, svc.ServiceName, svc.Version}, apt.SPLIT)
 			delSvcReq := &pb.DeleteServiceRequest{
 				ServiceId: svc.ServiceId,
-				Force:     true, //force delete
+				Force:     true, //force delete 删除所有的关联信息
 			}
+
+			//删除
 			delSvcResp, err := apt.ServiceAPI.Delete(ctx, delSvcReq)
 			if err != nil {
 				log.Errorf(err, "clear service failed, %s", svcCtxStr)
@@ -99,11 +103,15 @@ func ctxFromDomainProject(domainProject string) (ctx context.Context, err error)
 }
 
 //check whether a service should be cleared
+// 满不满足被清理的条件
 func shouldClear(ctx context.Context, timeLimitStamp string, svc *pb.MicroService) (bool, error) {
 	//ignore a service if it is created after timeLimitStamp
+	// 创建时间是否在timeLimitStamp之后
 	if svc.Timestamp > timeLimitStamp {
 		return false, nil
 	}
+
+	//是否存在instance
 	getInstsReq := &pb.GetInstancesRequest{
 		ConsumerServiceId: svc.ServiceId,
 		ProviderServiceId: svc.ServiceId,

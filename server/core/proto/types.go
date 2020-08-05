@@ -40,7 +40,9 @@ type ServerConfig struct {
 	SslCiphers    string `json:"sslCiphers"`
 
 	AutoSyncInterval  string `json:"-"`
+	// etcd压缩 保留最近多少个版本 最新版本-CompactIndexDelta
 	CompactIndexDelta int64  `json:"-"`
+	// etcd压缩的间隔时间
 	CompactInterval   string `json:"-"`
 	// 是否开启性能监控
 	EnablePProf bool `json:"enablePProf"`
@@ -59,18 +61,23 @@ type ServerConfig struct {
 	PluginsDir string          `json:"-"`
 	// 这里会记录各个plugins的信息
 	Plugins    util.JSONObject `json:"plugins"`
-
+	// 是否自注册
 	SelfRegister bool `json:"selfRegister"`
 
 	//clear no-instance services
+	// 是否清理没有instance的service
 	ServiceClearEnabled  bool          `json:"serviceClearEnabled"`
+	// 清理service的间隔时间(定时)
 	ServiceClearInterval time.Duration `json:"serviceClearInterval"`
 	//if a service's existence time reaches this value, it can be cleared
+	// 清理的service的创建时间距离当前时间的间隔
 	ServiceTTL time.Duration `json:"serviceTTL"`
-	//CacheTTL is the ttl of cache discovery缓存清理间隔，未设置就永远不清理
+	//CacheTTL is the ttl of cache discovery
+	//缓存清理间隔，未设置就永远不清理
 	CacheTTL time.Duration `json:"cacheTTL"`
 }
 
+// version 会读取etcd中的全局版本号进行更新 默认是0
 type ServerInformation struct {
 	Version string       `json:"version"`
 	Config  ServerConfig `json:"-"`

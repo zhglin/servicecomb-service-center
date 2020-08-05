@@ -26,6 +26,7 @@ import (
 	"github.com/apache/servicecomb-service-center/server/plugin/registry"
 )
 
+// 获取service_center的全局版本号
 func LoadServerVersion() error {
 	resp, err := backend.Registry().Do(context.Background(),
 		registry.GET, registry.WithStrKey(core.GetServerInfoKey()))
@@ -36,6 +37,7 @@ func LoadServerVersion() error {
 		return nil
 	}
 
+	// 版本号直接解析到core.serverInfo
 	err = json.Unmarshal(resp.Kvs[0].Value, &core.ServerInfo)
 	if err != nil {
 		log.Errorf(err, "load server version failed, maybe incompatible")
@@ -44,6 +46,7 @@ func LoadServerVersion() error {
 	return nil
 }
 
+// 更新etcd中service_center的最大版本号
 func UpgradeServerVersion() error {
 	bytes, err := json.Marshal(core.ServerInfo)
 	if err != nil {

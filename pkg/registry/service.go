@@ -18,6 +18,7 @@
 package registry
 
 type MicroService struct {
+	// 完成注册时更新
 	ServiceId    string             `protobuf:"bytes,1,opt,name=serviceId" json:"serviceId,omitempty"`
 	AppId        string             `protobuf:"bytes,2,opt,name=appId" json:"appId,omitempty"`
 	ServiceName  string             `protobuf:"bytes,3,opt,name=serviceName" json:"serviceName,omitempty"`
@@ -28,6 +29,7 @@ type MicroService struct {
 	Paths        []*ServicePath     `protobuf:"bytes,10,rep,name=paths" json:"paths,omitempty"`
 	Status       string             `protobuf:"bytes,8,opt,name=status" json:"status,omitempty"`
 	Properties   map[string]string  `protobuf:"bytes,9,rep,name=properties" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// 注册时间
 	Timestamp    string             `protobuf:"bytes,11,opt,name=timestamp" json:"timestamp,omitempty"`
 	Providers    []*MicroServiceKey `protobuf:"bytes,12,rep,name=providers" json:"providers,omitempty"`
 	Alias        string             `protobuf:"bytes,13,opt,name=alias" json:"alias,omitempty"`

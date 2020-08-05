@@ -25,7 +25,7 @@ import (
 const (
 	SPLIT                    = "/"
 	RegistryRootKey          = "cse-sr"
-	RegistrySysKey           = "sys"
+	RegistrySysKey           = "sys"  //service_center的全局最大版本号
 	RegistryServiceKey       = "ms"
 	RegistryInstanceKey      = "inst"
 	RegistryFile             = "files"
@@ -52,6 +52,7 @@ func GetRootKey() string {
 	return SPLIT + RegistryRootKey
 }
 
+//Service	/cse-sr/ms/files/domin/project/
 func GetServiceRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -61,6 +62,7 @@ func GetServiceRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+//ServiceIndex	/cse-sr/ms/indexes/domin/project/environment/appId/serviceName/version => serviceId
 func GetServiceIndexRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -70,6 +72,7 @@ func GetServiceIndexRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+//ServiceAlias	/cse-sr/ms/alias/domin/project/environment/appId/alias/version       => serviceId
 func GetServiceAliasRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -141,6 +144,7 @@ func GetInstanceLeaseRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+//Service	/cse-sr/ms/files/domin/project/serviceId  => date {pb.MicroService}
 func GenerateServiceKey(domainProject string, serviceID string) string {
 	return util.StringJoin([]string{
 		GetServiceRootKey(domainProject),
@@ -217,6 +221,8 @@ func GetServiceSchemaSummaryRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+// Instance	/cse-sr/inst/files/domin/project/serviceId/instanceId => date {MicroServiceInstance}
+// 绑定lease
 func GenerateInstanceKey(domainProject string, serviceID string, instanceID string) string {
 	return util.StringJoin([]string{
 		GetInstanceRootKey(domainProject),
@@ -225,6 +231,8 @@ func GenerateInstanceKey(domainProject string, serviceID string, instanceID stri
 	}, SPLIT)
 }
 
+// Lease  /cse-sr/inst/leases/domin/project/serviceId/instanceId  => leaseId  租约
+// 绑定lease
 func GenerateInstanceLeaseKey(domainProject string, serviceID string, instanceID string) string {
 	return util.StringJoin([]string{
 		GetInstanceLeaseRootKey(domainProject),

@@ -37,9 +37,10 @@ const (
 )
 
 type executorWithTTL struct {
-	*Executor	//执行器
-	TTL int64  //执行周期次数 每removeExecutorInterval时间间隔-1
+	*Executor       //执行器
+	TTL       int64 //执行周期次数 每removeExecutorInterval时间间隔-1
 }
+
 // 异步任务的Executor管理器 add一次执行一次
 type AsyncTaskService struct {
 	//每个任务的executor 以task的key标识
@@ -49,6 +50,7 @@ type AsyncTaskService struct {
 	ready     chan struct{}
 	isClose   bool
 }
+
 // 获取 || 创建 任务执行器
 func (lat *AsyncTaskService) getOrNewExecutor(task Task) (s *Executor, isNew bool) {
 	var (
@@ -92,6 +94,7 @@ func (lat *AsyncTaskService) Add(ctx context.Context, task Task) error {
 	// 非首次的添加到executor中 延迟执行
 	return s.AddTask(task)
 }
+
 // 删除任务
 func (lat *AsyncTaskService) removeExecutor(key string) {
 	if s, ok := lat.executors[key]; ok {
@@ -99,6 +102,7 @@ func (lat *AsyncTaskService) removeExecutor(key string) {
 		delete(lat.executors, key)
 	}
 }
+
 // key对应的最后一次执行的task
 func (lat *AsyncTaskService) LatestHandled(key string) (Task, error) {
 	lat.lock.RLock()
@@ -123,7 +127,7 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 		case <-ctx.Done():
 			log.Debugf("daemon thread exited for AsyncTaskService stopped")
 			return
-		case <-timer.C:  //定时执行
+		case <-timer.C: //定时执行
 			// 加锁读出来所有任务 然后依次执行
 			lat.lock.RLock()
 			l := len(lat.executors)
@@ -138,7 +142,7 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 			}
 
 			timer.Reset(executeInterval)
-		case <-ticker.C:	//定时清理
+		case <-ticker.C: //定时清理
 			util.ResetTimer(timer, executeInterval)
 
 			lat.lock.RLock()
@@ -177,6 +181,7 @@ func (lat *AsyncTaskService) daemon(ctx context.Context) {
 		}
 	}
 }
+
 // 执行taskService
 func (lat *AsyncTaskService) Run() {
 	lat.lock.Lock()
@@ -189,6 +194,7 @@ func (lat *AsyncTaskService) Run() {
 	// 主要执行lat.daemon
 	lat.goroutine.Do(lat.daemon)
 }
+
 // 关闭taskService  stop之后可以run
 func (lat *AsyncTaskService) Stop() {
 	lat.lock.Lock()
@@ -208,10 +214,12 @@ func (lat *AsyncTaskService) Stop() {
 
 	util.SafeCloseChan(lat.ready)
 }
+
 // 是否准备好
 func (lat *AsyncTaskService) Ready() <-chan struct{} {
 	return lat.ready
 }
+
 // 重置lat.executors  map缩容
 func (lat *AsyncTaskService) renew() {
 	newExecutor := make(map[string]*executorWithTTL)

@@ -51,6 +51,7 @@ func GetServiceWithRev(ctx context.Context, domain string, id string, rev int64)
 	return serviceResp.Kvs[0].Value.(*pb.MicroService), nil
 }
 
+// 根据serviceId获取service信息
 func GetService(ctx context.Context, domainProject string, serviceID string) (*pb.MicroService, error) {
 	key := apt.GenerateServiceKey(domainProject, serviceID)
 	opts := append(FromContext(ctx), registry.WithStrKey(key))
@@ -87,16 +88,20 @@ func getServicesRawData(ctx context.Context, domainProject string) ([]*discovery
 
 //GetAllServicesAcrossDomainProject get services of all domains, projects
 //the map's key is domainProject
+// 获取所有的service
 func GetAllServicesAcrossDomainProject(ctx context.Context) (map[string][]*pb.MicroService, error) {
 	key := apt.GetServiceRootKey("")
 	opts := append(FromContext(ctx),
 		registry.WithStrKey(key),
 		registry.WithPrefix())
+
+	//获取全量的service
 	serviceResp, err := backend.Store().Service().Search(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
 
+	//不存在service
 	services := make(map[string][]*pb.MicroService)
 	if len(serviceResp.Kvs) == 0 {
 		return services, nil
@@ -105,6 +110,7 @@ func GetAllServicesAcrossDomainProject(ctx context.Context) (map[string][]*pb.Mi
 	for _, value := range serviceResp.Kvs {
 		prefix := util.BytesToStringWithNoCopy(value.Key)
 		parts := strings.Split(prefix, apt.SPLIT)
+		// prefix=/cse-sr/ms/files/domin/project/serviceId
 		if len(parts) != 7 {
 			continue
 		}
@@ -145,6 +151,7 @@ func GetServiceID(ctx context.Context, key *pb.MicroServiceKey) (serviceID strin
 	return
 }
 
+// 从discovery获取serviceId
 func searchServiceID(ctx context.Context, key *pb.MicroServiceKey) (string, error) {
 	opts := append(FromContext(ctx), registry.WithStrKey(apt.GenerateServiceIndexKey(key)))
 	resp, err := backend.Store().ServiceIndex().Search(ctx, opts...)
@@ -157,6 +164,7 @@ func searchServiceID(ctx context.Context, key *pb.MicroServiceKey) (string, erro
 	return resp.Kvs[0].Value.(string), nil
 }
 
+// 从discovery的alias获取serviceId
 func searchServiceIDFromAlias(ctx context.Context, key *pb.MicroServiceKey) (string, error) {
 	opts := append(FromContext(ctx), registry.WithStrKey(apt.GenerateServiceAliasKey(key)))
 	resp, err := backend.Store().ServiceAlias().Search(ctx, opts...)
@@ -191,6 +199,7 @@ func GetServiceAllVersions(ctx context.Context, key *pb.MicroServiceKey, alias b
 	return resp, err
 }
 
+// 根据版本规则查找serviceIds
 func FindServiceIds(ctx context.Context, versionRule string, key *pb.MicroServiceKey) ([]string, bool, error) {
 	// 版本规则
 	match := ParseVersionRule(versionRule)

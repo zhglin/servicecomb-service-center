@@ -35,7 +35,7 @@ var store = &KvStore{}
 
 func init() {
 	store.Initialize()
-	registerInnerTypes()
+	registerInnerTypes()  //注册各个discovery.Type
 }
 
 // discovery etcd中的数据管理器
@@ -222,6 +222,7 @@ func (s *KvStore) Project() discovery.Adaptor                   { return s.Adapt
 
 // KeepAlive will always return ok when registry is unavailable
 // unless the registry response is LeaseNotFound
+// 续租 支持异步
 func (s *KvStore) KeepAlive(ctx context.Context, opts ...registry.PluginOpOption) (int64, error) {
 	op := registry.OpPut(opts...)
 
@@ -233,6 +234,7 @@ func (s *KvStore) KeepAlive(ctx context.Context, opts ...registry.PluginOpOption
 		return ttl, err
 	}
 
+	// service_center节点异步
 	err := s.taskService.Add(ctx, t)
 	if err != nil {
 		return 0, err

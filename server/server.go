@@ -46,14 +46,15 @@ const buildin = "buildin"
 
 var server ServiceCenterServer
 
+// 启动服务
 func Run() {
 	server.Run()
 }
 
 type ServiceCenterServer struct {
 	apiService    *APIServer
-	//discovery管理器
 	notifyService *nf.Service
+	// discovery
 	cacheService  *backend.KvStore
 	goroutine     *gopool.Pool
 }
@@ -75,6 +76,7 @@ func (s *ServiceCenterServer) waitForQuit() {
 	s.Stop()
 }
 
+// 是否需要升级etcd中的版本号
 func (s *ServiceCenterServer) needUpgrade() bool {
 	err := LoadServerVersion()
 	if err != nil {
@@ -82,6 +84,7 @@ func (s *ServiceCenterServer) needUpgrade() bool {
 		return false
 	}
 
+	// etcd中的version 是否比 version.Ver().Version 小
 	update := !serviceUtil.VersionMatchRule(core.ServerInfo.Version,
 		fmt.Sprintf("%s+", version.Ver().Version))
 	if !update && version.Ver().Version != core.ServerInfo.Version {
@@ -93,6 +96,7 @@ func (s *ServiceCenterServer) needUpgrade() bool {
 	return update
 }
 
+// 同步etcd中记录的service_center节点的最大版本号
 func (s *ServiceCenterServer) loadOrUpgradeServerVersion() {
 	lock, err := mux.Lock(mux.GlobalLock)
 
@@ -100,20 +104,25 @@ func (s *ServiceCenterServer) loadOrUpgradeServerVersion() {
 		log.Errorf(err, "wait for server ready failed")
 		os.Exit(1)
 	}
+
+	//etcd中的全局版本是否小于此节点的version
 	if s.needUpgrade() {
 		core.ServerInfo.Version = version.Ver().Version
 
+		// 更新etcd中的最大版本号
 		if err := UpgradeServerVersion(); err != nil {
 			log.Errorf(err, "upgrade server version failed")
 			os.Exit(1)
 		}
 	}
+
 	err = lock.Unlock()
 	if err != nil {
 		log.Error("", err)
 	}
 }
 
+// etcd压缩
 func (s *ServiceCenterServer) compactBackendService() {
 	delta := core.ServerInfo.Config.CompactIndexDelta
 	if delta <= 0 || len(core.ServerInfo.Config.CompactInterval) == 0 {
@@ -138,7 +147,7 @@ func (s *ServiceCenterServer) compactBackendService() {
 					continue
 				}
 
-				err = backend.Registry().Compact(ctx, delta)
+					err = backend.Registry().Compact(ctx, delta)
 				if err != nil {
 					log.Error("", err)
 				}
@@ -152,6 +161,7 @@ func (s *ServiceCenterServer) compactBackendService() {
 }
 
 // clear services who have no instance
+// 清理无instance的service
 func (s *ServiceCenterServer) clearNoInstanceServices() {
 	if !core.ServerInfo.Config.ServiceClearEnabled {
 		return
@@ -185,6 +195,7 @@ func (s *ServiceCenterServer) clearNoInstanceServices() {
 	})
 }
 
+// center server初始化
 func (s *ServiceCenterServer) initialize() {
 	s.cacheService = backend.Store()
 	s.apiService = GetAPIServer()
@@ -196,10 +207,10 @@ func (s *ServiceCenterServer) startServices() {
 	// notifications
 	s.notifyService.Start()
 
-	// load server plugins
+	// load server plugins  创建各个plugin实例
 	plugin.LoadPlugins()
 	rbac.Init()
-	// check version
+	// check version 保持etcd中记录的是service_center节点的最大版本号
 	if core.ServerInfo.Config.SelfRegister {
 		s.loadOrUpgradeServerVersion()
 	}
@@ -209,10 +220,11 @@ func (s *ServiceCenterServer) startServices() {
 	s.cacheService.Run()
 	<-s.cacheService.Ready()
 
+	// 支持registry
 	if buildin != beego.AppConfig.DefaultString("registry_plugin", buildin) {
-		// compact backend automatically
+		// compact backend automatically 压缩etcd历史版本
 		s.compactBackendService()
-		// clean no-instance services automatically
+		// clean no-instance services automatically  service清理
 		s.clearNoInstanceServices()
 	}
 

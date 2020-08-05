@@ -89,6 +89,7 @@ func prepareSelfRegistration() {
 	}
 }
 
+// 注册中心节点的默认context
 func AddDefaultContextValue(ctx context.Context) context.Context {
 	return util.SetContext(util.SetContext(util.SetDomainProject(ctx,
 		RegistryDomain, RegistryProject),
@@ -128,11 +129,13 @@ func IsShared(key *registry.MicroServiceKey) bool {
 	return ok
 }
 
+// 是否是service_center节点
 func IsSCInstance(ctx context.Context) bool {
 	b, _ := ctx.Value(CtxScSelf).(bool)
 	return b
 }
 
+// 服务是否存在的请求参数
 func GetExistenceRequest() *registry.GetExistenceRequest {
 	return &registry.GetExistenceRequest{
 		Type:        proto.EXISTENCE_MS,
