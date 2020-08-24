@@ -54,6 +54,7 @@ const (
 	ExistTypeSchema       = "schema"
 )
 
+// 创建service
 func (s *MicroServiceService) Create(ctx context.Context, in *pb.CreateServiceRequest) (*pb.CreateServiceResponse, error) {
 	if in == nil || in.Service == nil {
 		log.Errorf(nil, "create micro-service failed: request body is empty")
@@ -68,6 +69,7 @@ func (s *MicroServiceService) Create(ctx context.Context, in *pb.CreateServiceRe
 		return rsp, err
 	}
 
+	// 不存在tag rule instances
 	if !s.isCreateServiceEx(in) {
 		return rsp, err
 	}
@@ -76,12 +78,14 @@ func (s *MicroServiceService) Create(ctx context.Context, in *pb.CreateServiceRe
 	return s.CreateServiceEx(ctx, in, rsp.ServiceId)
 }
 
+// 新建service
 func (s *MicroServiceService) CreateServicePri(ctx context.Context, in *pb.CreateServiceRequest) (*pb.CreateServiceResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	service := in.Service
 	serviceFlag := util.StringJoin([]string{
 		service.Environment, service.AppId, service.ServiceName, service.Version}, "/")
 
+	// 设置默认数据
 	serviceUtil.SetServiceDefaultValue(service)
 
 	err := Validate(in)
@@ -105,7 +109,7 @@ func (s *MicroServiceService) CreateServicePri(ctx context.Context, in *pb.Creat
 	}
 	reporter := checkQuota(ctx, domainProject)
 	defer reporter.Close(ctx)
-
+	// 不管是不是share服务都走quota
 	if reporter != nil && reporter.Err != nil {
 		log.Errorf(reporter.Err, "create micro-service[%s] failed, operator: %s",
 			serviceFlag, remoteIP)
@@ -118,10 +122,12 @@ func (s *MicroServiceService) CreateServicePri(ctx context.Context, in *pb.Creat
 		return resp, nil
 	}
 
+	// etcd serviceIndex key
 	index := apt.GenerateServiceIndexKey(serviceKey)
 
 	// 产生全局service id
 	requestServiceID := service.ServiceId
+	// requestServiceId 未设置成service.ServiceId 标记serviceId是否是外部生成的
 	if len(requestServiceID) == 0 {
 		ctx = util.SetContext(ctx, uuid.ContextKey, index)
 		service.ServiceId = plugin.Plugins().UUID().GetServiceID(ctx)
@@ -138,30 +144,38 @@ func (s *MicroServiceService) CreateServicePri(ctx context.Context, in *pb.Creat
 		}, err
 	}
 
+	// etcd service key
 	key := apt.GenerateServiceKey(domainProject, service.ServiceId)
 	keyBytes := util.StringToBytesWithNoCopy(key)
 	indexBytes := util.StringToBytesWithNoCopy(index)
+	// 别名
 	aliasBytes := util.StringToBytesWithNoCopy(apt.GenerateServiceAliasKey(serviceKey))
 
+	// etcd 写入
 	opts := []registry.PluginOp{
 		registry.OpPut(registry.WithKey(keyBytes), registry.WithValue(data)),
 		registry.OpPut(registry.WithKey(indexBytes), registry.WithStrValue(service.ServiceId)),
 	}
+	// 保证service serviceIndex都不存在
 	uniqueCmpOpts := []registry.CompareOp{
 		registry.OpCmp(registry.CmpVer(indexBytes), registry.CmpEqual, 0),
 		registry.OpCmp(registry.CmpVer(keyBytes), registry.CmpEqual, 0),
 	}
+	// etcd写入失败获取service
 	failOpts := []registry.PluginOp{
-		registry.OpGet(registry.WithKey(indexBytes)),
+		registry.OpGet(registry.WithKey(indexBytes)), // 不同service相同serviceId
 	}
-
+	// 存在别名
 	if len(serviceKey.Alias) > 0 {
+		// etcd 写入
 		opts = append(opts, registry.OpPut(registry.WithKey(aliasBytes), registry.WithStrValue(service.ServiceId)))
+		// etcd 保证别名不存在
 		uniqueCmpOpts = append(uniqueCmpOpts,
 			registry.OpCmp(registry.CmpVer(aliasBytes), registry.CmpEqual, 0))
+		// etcd 写入失败获取serviceAlias
 		failOpts = append(failOpts, registry.OpGet(registry.WithKey(aliasBytes)))
 	}
-
+	// etcd 事务写入
 	resp, err := backend.Registry().TxnWithCmp(ctx, opts, uniqueCmpOpts, failOpts)
 	if err != nil {
 		log.Errorf(err, "create micro-service[%s] failed, operator: %s",
@@ -171,9 +185,10 @@ func (s *MicroServiceService) CreateServicePri(ctx context.Context, in *pb.Creat
 		}, err
 	}
 	if !resp.Succeeded {
+		// serviceId是外部生成的
 		if len(requestServiceID) != 0 {
-			if len(resp.Kvs) == 0 ||
-				requestServiceID != util.BytesToStringWithNoCopy(resp.Kvs[0].Value) {
+			if len(resp.Kvs) == 0 || // 不同service相同serviceId 获取不到
+				requestServiceID != util.BytesToStringWithNoCopy(resp.Kvs[0].Value) { // 相同的服务 serviceId不同
 				log.Warnf("create micro-service[%s] failed, service already exists, operator: %s",
 					serviceFlag, remoteIP)
 				return &pb.CreateServiceResponse{
@@ -183,6 +198,7 @@ func (s *MicroServiceService) CreateServicePri(ctx context.Context, in *pb.Creat
 			}
 		}
 
+		// etcd 返回失败 但是未获取到failOpts
 		if len(resp.Kvs) == 0 {
 			// internal error?
 			log.Errorf(nil, "create micro-service[%s] failed, unexpected txn response, operator: %s",
@@ -192,6 +208,7 @@ func (s *MicroServiceService) CreateServicePri(ctx context.Context, in *pb.Creat
 			}, nil
 		}
 
+		// serviceId 内部生成 已存在
 		serviceIDInner := util.BytesToStringWithNoCopy(resp.Kvs[0].Value)
 		log.Warnf("create micro-service[%s][%s] failed, service already exists, operator: %s",
 			serviceIDInner, serviceFlag, remoteIP)
@@ -365,7 +382,7 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 	return proto.CreateResponse(proto.Response_SUCCESS, "Unregister service successfully."), nil
 }
 
-// 删除指定service
+// 删除指定serviceId
 func (s *MicroServiceService) Delete(ctx context.Context, in *pb.DeleteServiceRequest) (*pb.DeleteServiceResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -682,14 +699,15 @@ func (s *MicroServiceService) Exist(ctx context.Context, in *pb.GetExistenceRequ
 	}
 }
 
+// 生成额外的service信息
 func (s *MicroServiceService) CreateServiceEx(ctx context.Context, in *pb.CreateServiceRequest, serviceID string) (*pb.CreateServiceResponse, error) {
 	result := &pb.CreateServiceResponse{
 		ServiceId: serviceID,
 		Response:  &pb.Response{},
 	}
-	var chanLen int = 0
+	var chanLen int = 0 //协调关闭 createRespChan 解除阻塞
 	createRespChan := make(chan *pb.Response, 10)
-	//create rules
+	//create rules 黑白名单
 	if in.Rules != nil && len(in.Rules) != 0 {
 		chanLen++
 		gopool.Go(func(_ context.Context) {
@@ -698,6 +716,7 @@ func (s *MicroServiceService) CreateServiceEx(ctx context.Context, in *pb.Create
 				Rules:     in.Rules,
 			}
 			chanRsp := &pb.Response{}
+			// 添加rule
 			rsp, err := s.AddRule(ctx, req)
 			if err != nil {
 				chanRsp.Message = err.Error()
@@ -718,6 +737,7 @@ func (s *MicroServiceService) CreateServiceEx(ctx context.Context, in *pb.Create
 				Tags:      in.Tags,
 			}
 			chanRsp := &pb.Response{}
+			// 添加tag
 			rsp, err := s.AddTags(ctx, req)
 			if err != nil {
 				chanRsp.Message = err.Error()
@@ -739,6 +759,7 @@ func (s *MicroServiceService) CreateServiceEx(ctx context.Context, in *pb.Create
 					Instance: ins,
 				}
 				req.Instance.ServiceId = serviceID
+				// 写入instance
 				rsp, err := s.instanceService.Register(ctx, req)
 				if err != nil {
 					chanRsp.Message += fmt.Sprintf("{instance:%v,result:%s}", ins.Endpoints, err.Error())
@@ -746,7 +767,7 @@ func (s *MicroServiceService) CreateServiceEx(ctx context.Context, in *pb.Create
 				if rsp.Response.GetCode() != proto.Response_SUCCESS {
 					chanRsp.Message += fmt.Sprintf("{instance:%v,result:%s}", ins.Endpoints, rsp.Response.GetMessage())
 				}
-				createRespChan <- chanRsp
+				createRespChan <- chanRsp //bug
 			}
 		})
 	}
@@ -755,6 +776,7 @@ func (s *MicroServiceService) CreateServiceEx(ctx context.Context, in *pb.Create
 	var errMessages []string
 	for createResp := range createRespChan {
 		chanLen--
+		// 异常信息
 		if len(createResp.GetMessage()) != 0 {
 			errMessages = append(errMessages, createResp.GetMessage())
 		}
@@ -776,6 +798,7 @@ func (s *MicroServiceService) CreateServiceEx(ctx context.Context, in *pb.Create
 	return result, nil
 }
 
+// 是否有额外属性
 func (s *MicroServiceService) isCreateServiceEx(in *pb.CreateServiceRequest) bool {
 	if len(in.Rules) == 0 && len(in.Tags) == 0 && len(in.Instances) == 0 {
 		return false

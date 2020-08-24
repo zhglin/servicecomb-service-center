@@ -87,10 +87,12 @@ func init() {
 	log.Info("BootStrap ServiceComb.io Edition")
 
 	// intercept requests before routing.
+	// 路由匹配前前置拦截
 	interceptor.RegisterInterceptFunc(access.Intercept)
 	interceptor.RegisterInterceptFunc(cors.Intercept)
 
 	// handle requests after routing.
+	// 匹配到路由后的后置处理
 	accesslog.RegisterHandlers()
 	maxbody.RegisterHandlers()
 	metric.RegisterHandlers()

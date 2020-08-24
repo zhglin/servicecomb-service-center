@@ -39,7 +39,7 @@ var (
 
 const (
 	// the same as v3rpc.MaxOpsPerTxn = 128
-	MaxTxnNumberOneTime = 128
+	MaxTxnNumberOneTime = 128 // etcd一次事务操作的最大数量
 )
 
 // 创建register组件
@@ -89,11 +89,13 @@ func GetRegistryEngine() *RegistryEngine {
 	return engineInstance
 }
 
+// BatchCommitWithCmp 代理
 func BatchCommit(ctx context.Context, opts []registry.PluginOp) error {
 	_, err := BatchCommitWithCmp(ctx, opts, nil, nil)
 	return err
 }
 
+// 分批执行etcd事务
 func BatchCommitWithCmp(ctx context.Context, opts []registry.PluginOp,
 	cmp []registry.CompareOp, fail []registry.PluginOp) (resp *registry.PluginResponse, err error) {
 	lenOpts := len(opts)
@@ -127,11 +129,15 @@ func (s *RegistryEngine) Start() error {
 		return err
 	}
 
+	// 续约
 	s.heartBeatService()
+
+	// 上报监控
 	ReportScInstance()
 	return nil
 }
 
+// service_center节点关闭
 func (s *RegistryEngine) Stop() {
 	s.goroutine.Close(true)
 
@@ -210,6 +216,7 @@ func (s *RegistryEngine) registryInstance(pCtx context.Context) error {
 	return nil
 }
 
+// 取消instance实例  不删除service
 func (s *RegistryEngine) unregisterInstance(pCtx context.Context) error {
 	if len(core.Instance.InstanceId) == 0 {
 		return nil
@@ -231,6 +238,7 @@ func (s *RegistryEngine) unregisterInstance(pCtx context.Context) error {
 	return nil
 }
 
+//续约
 func (s *RegistryEngine) sendHeartBeat(pCtx context.Context) {
 	ctx := core.AddDefaultContextValue(pCtx)
 	respI, err := core.InstanceAPI.Heartbeat(ctx, core.HeartbeatRequest())
@@ -254,6 +262,7 @@ func (s *RegistryEngine) sendHeartBeat(pCtx context.Context) {
 	}
 }
 
+// 定时续约
 func (s *RegistryEngine) heartBeatService() {
 	s.goroutine.Do(func(ctx context.Context) {
 		for {

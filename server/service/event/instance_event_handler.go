@@ -42,6 +42,7 @@ const (
 // 2. recover the instance quota
 // 3. publish the instance events to the subscribers
 // 4. reset the find instance cache
+// instance类型  监控
 type InstanceEventHandler struct {
 }
 
@@ -61,12 +62,14 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 	switch action {
 	case pb.EVT_INIT:
 		metrics.ReportInstances(domainName, count)
+		// 本地cache不存在
 		ms := serviceUtil.GetServiceFromCache(domainProject, providerID)
 		if ms == nil {
 			log.Warnf("caught [%s] instance[%s/%s] event, endpoints %v, get cached provider's file failed",
 				action, providerID, providerInstanceID, instance.Endpoints)
 			return
 		}
+		// 监控
 		frameworkName, frameworkVersion := getFramework(ms)
 		metrics.ReportFramework(domainName, projectName, frameworkName, frameworkVersion, count)
 		return
@@ -75,6 +78,7 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 	case pb.EVT_DELETE:
 		count = decreaseOne
 		metrics.ReportInstances(domainName, count)
+		// 非default 设置quota
 		if !apt.IsDefaultDomainProject(domainProject) {
 			projectName := domainProject[idx+1:]
 			serviceUtil.RemandInstanceQuota(
@@ -114,6 +118,7 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 		return
 	}
 
+	//事件推送
 	PublishInstanceEvent(evt, domainProject, proto.MicroServiceToKey(domainProject, ms), consumerIDs)
 }
 

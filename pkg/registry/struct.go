@@ -182,10 +182,15 @@ func (m *GetExistenceResponse) GetSummary() string {
 	return ""
 }
 
+// 注册服务
 type CreateServiceRequest struct {
+	// service信息
 	Service   *MicroService             `protobuf:"bytes,1,opt,name=service" json:"service,omitempty"`
+	// 黑白名单
 	Rules     []*AddOrUpdateServiceRule `protobuf:"bytes,2,rep,name=rules" json:"rules,omitempty"`
+	// 标签
 	Tags      map[string]string         `protobuf:"bytes,3,rep,name=tags" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// 对应的多个instance
 	Instances []*MicroServiceInstance   `protobuf:"bytes,4,rep,name=instances" json:"instances,omitempty"`
 }
 
@@ -309,7 +314,7 @@ type HealthCheck struct {
 	Port     int32  `protobuf:"varint,2,opt,name=port" json:"port,omitempty"`
 	// 时间间隔  ttl := int64(Interval * (Times + 1))
 	Interval int32  `protobuf:"varint,3,opt,name=interval" json:"interval,omitempty"`
-	// 次数
+	// 次数 多少个interval续约失败删除节点
 	Times    int32  `protobuf:"varint,4,opt,name=times" json:"times,omitempty"`
 	Url      string `protobuf:"bytes,5,opt,name=url" json:"url,omitempty"`
 }

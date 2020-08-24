@@ -17,8 +17,11 @@
 
 package chain
 
+// http调用链
 type Chain struct {
+	// 标识不同路由子树   不同的子树可以设置不同的chain
 	name         string
+	//
 	handlers     []Handler
 	currentIndex int
 }
@@ -34,6 +37,7 @@ func (c *Chain) Name() string {
 }
 
 func (c *Chain) syncNext(i *Invocation) {
+	// 当前chain中的handlers已全部执行完
 	if c.currentIndex >= len(c.handlers)-1 {
 		i.Success()
 		return
@@ -46,6 +50,7 @@ func (c *Chain) Next(i *Invocation) {
 	c.syncNext(i)
 }
 
+// 创建不同name的chain
 func NewChain(name string, handlers []Handler) (ch Chain) {
 	ch.Init(name, handlers)
 	return ch

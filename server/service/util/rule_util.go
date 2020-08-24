@@ -106,6 +106,7 @@ func GetRulesUtil(ctx context.Context, domainProject string, serviceID string) (
 	return rules, nil
 }
 
+// rule 是否已存在
 func RuleExist(ctx context.Context, domainProject string, serviceID string, attr string, pattern string) bool {
 	opts := append(FromContext(ctx),
 		registry.WithStrKey(apt.GenerateRuleIndexKey(domainProject, serviceID, attr, pattern)),
@@ -117,6 +118,7 @@ func RuleExist(ctx context.Context, domainProject string, serviceID string, attr
 	return true
 }
 
+// 获取rule长度 以及其中第一个的ruleType
 func GetServiceRuleType(ctx context.Context, domainProject string, serviceID string) (string, int, error) {
 	key := apt.GenerateServiceRuleKey(domainProject, serviceID, "")
 	opts := append(FromContext(ctx),

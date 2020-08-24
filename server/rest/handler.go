@@ -29,7 +29,7 @@ import (
 const CtxStartTimestamp = "x-start-timestamp"
 
 func init() {
-	// api
+	// api 注册rest使用的handler
 	RegisterServerHandler("/", NewServerHandler(roa.GetRouter()))
 }
 

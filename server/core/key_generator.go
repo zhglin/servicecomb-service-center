@@ -99,6 +99,7 @@ func GetServiceRuleRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+// /cse-sr/ms/rule-indexes/domin/project/
 func GetServiceRuleIndexRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -108,6 +109,7 @@ func GetServiceRuleIndexRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+// /cse-sr/ms/tags/domin/project/
 func GetServiceTagRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -144,7 +146,7 @@ func GetInstanceLeaseRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
-//Service	/cse-sr/ms/files/domin/project/serviceId  => date {pb.MicroService}
+//Service	/cse-sr/ms/files/{domin/project}/{serviceId}  => date {pb.MicroService}
 func GenerateServiceKey(domainProject string, serviceID string) string {
 	return util.StringJoin([]string{
 		GetServiceRootKey(domainProject),
@@ -152,6 +154,7 @@ func GenerateServiceKey(domainProject string, serviceID string) string {
 	}, SPLIT)
 }
 
+//RuleIndex		/cse-sr/ms/rule-indexes/{domin/project}/{serciveId}/{Attribute}/{Pattern} => ruleId
 func GenerateRuleIndexKey(domainProject string, serviceID string, attr string, pattern string) string {
 	return util.StringJoin([]string{
 		GetServiceRuleIndexRootKey(domainProject),
@@ -161,6 +164,7 @@ func GenerateRuleIndexKey(domainProject string, serviceID string, attr string, p
 	}, SPLIT)
 }
 
+//ServiceIndex /cse-sr/ms/indexes/{domin/project}/{environment}/{appId}/{serviceName}/{version} => serviceId
 func GenerateServiceIndexKey(key *registry.MicroServiceKey) string {
 	return util.StringJoin([]string{
 		GetServiceIndexRootKey(key.Tenant),
@@ -171,6 +175,7 @@ func GenerateServiceIndexKey(key *registry.MicroServiceKey) string {
 	}, SPLIT)
 }
 
+//ServiceAlias	/cse-sr/ms/alias/{domin/project}/{environment}/{appId}/{alias}/{version}	=> serviceId
 func GenerateServiceAliasKey(key *registry.MicroServiceKey) string {
 	return util.StringJoin([]string{
 		GetServiceAliasRootKey(key.Tenant),
@@ -181,6 +186,7 @@ func GenerateServiceAliasKey(key *registry.MicroServiceKey) string {
 	}, SPLIT)
 }
 
+//Rule	/cse-sr/ms/rules/{domin/project}/{serviceId}/{ruleId}  => data {pb.ServiceRule}
 func GenerateServiceRuleKey(domainProject string, serviceID string, ruleID string) string {
 	return util.StringJoin([]string{
 		GetServiceRuleRootKey(domainProject),
@@ -189,6 +195,7 @@ func GenerateServiceRuleKey(domainProject string, serviceID string, ruleID strin
 	}, SPLIT)
 }
 
+//ServiceTag	/cse-sr/ms/tags/{domin/project}/{serviceId} => date {map}
 func GenerateServiceTagKey(domainProject string, serviceID string) string {
 	return util.StringJoin([]string{
 		GetServiceTagRootKey(domainProject),
@@ -316,6 +323,7 @@ func GetDomainRootKey() string {
 	}, SPLIT)
 }
 
+// domin /cse-sr/domains/domain
 func GenerateDomainKey(domain string) string {
 	return util.StringJoin([]string{
 		GetDomainRootKey(),
@@ -358,6 +366,7 @@ func GenerateMetricsKey(name, utc, domain string) string {
 	}, SPLIT)
 }
 
+// /cse-sr/projects/{domain}
 func GetProjectRootKey(domain string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -366,6 +375,7 @@ func GetProjectRootKey(domain string) string {
 	}, SPLIT)
 }
 
+// project /cse-sr/projects/{domain}/{project}
 func GenerateProjectKey(domain, project string) string {
 	return util.StringJoin([]string{
 		GetProjectRootKey(domain),

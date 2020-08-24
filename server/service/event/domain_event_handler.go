@@ -24,6 +24,7 @@ import (
 )
 
 // DomainEventHandler report domain & project total number
+// domain类型 数量监控
 type DomainEventHandler struct {
 }
 

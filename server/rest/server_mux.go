@@ -34,6 +34,7 @@ import (
 const defaultServeMux = "default"
 
 var (
+	// restServer使用的路由  DefaultServerMux 是个引用
 	DefaultServerMux = http.NewServeMux()
 	serveMuxMap      = map[string]*http.ServeMux{
 		defaultServeMux: DefaultServerMux,
@@ -51,6 +52,7 @@ func RegisterServeMuxHandleFunc(name, pattern string, f http.HandlerFunc) {
 		name, util.FuncName(f), pattern)
 }
 
+// 这里的设置会直接修改DefaultServerMux的值
 func RegisterServeMuxHandler(name, pattern string, h http.Handler) {
 	serveMuxMap[name].Handle(pattern, h)
 

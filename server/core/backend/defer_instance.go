@@ -83,7 +83,7 @@ func (iedh *InstanceEventDeferHandler) recoverOrDefer(evt discovery.KvEvent) {
 	key := util.BytesToStringWithNoCopy(kv.Key)
 	_, ok := iedh.items[key]
 	switch evt.Type {
-	// 添加 修改事件 直接recover
+	// 添加 修改事件,直接recover  被保护期间注册上了,直接recover
 	case registry.EVT_CREATE, registry.EVT_UPDATE:
 		if ok {
 			log.Infof("recovered key %s events", key)
@@ -198,7 +198,7 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 	}
 }
 
-// 不需要进行保护
+// 过滤通过   (EVT_CREATE，EVT_UPDATE会替换掉EVT_DELETE事件)
 func (iedh *InstanceEventDeferHandler) recover(evt discovery.KvEvent) {
 	key := util.BytesToStringWithNoCopy(evt.KV.Key)
 	delete(iedh.items, key)
@@ -211,11 +211,11 @@ func (iedh *InstanceEventDeferHandler) renew() {
 	iedh.items = make(map[string]*deferItem)
 }
 
-// 重置 开启状态设置关闭并丢弃现有的items数据
-// cache与etcd的数据对比
-// 如果cache与etcd数据一致就reset
+// 重置
+// cache与etcd的数据对比,如果cache与etcd数据一致就reset
 // 如果cache已经Dirty，被保护的数据也可能是dirty，也会被reset
 func (iedh *InstanceEventDeferHandler) Reset() bool {
+	// 开启状态设置关闭并丢弃现有的items数据
 	if iedh.enabled {
 		iedh.resetCh <- struct{}{}
 		return true

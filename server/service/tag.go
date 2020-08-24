@@ -33,6 +33,7 @@ import (
 	serviceUtil "github.com/apache/servicecomb-service-center/server/service/util"
 )
 
+// 创建tags
 func (s *MicroServiceService) AddTags(ctx context.Context, in *pb.AddServiceTagsRequest) (*pb.AddServiceTagsResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -76,6 +77,8 @@ func (s *MicroServiceService) AddTags(ctx context.Context, in *pb.AddServiceTags
 			Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
 		}, err
 	}
+
+	// 已存在跳过，不修改  不存在添加
 	for key, value := range dataTags {
 		if _, ok := addTags[key]; ok {
 			continue

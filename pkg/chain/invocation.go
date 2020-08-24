@@ -110,6 +110,7 @@ func (i *Invocation) Invoke(f CallbackFunc) {
 	i.chain.Next(i)
 }
 
+// 关联并管理chain的调用
 func NewInvocation(ctx context.Context, ch Chain) (inv Invocation) {
 	inv.Init(ctx, ch)
 	return inv

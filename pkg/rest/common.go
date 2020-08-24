@@ -52,6 +52,7 @@ const (
 	DefaultConnPoolPerHostSize = 5
 )
 
+// 是否是合法的http method
 func isValidMethod(method string) bool {
 	switch method {
 	case http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete:

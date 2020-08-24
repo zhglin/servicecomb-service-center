@@ -62,6 +62,7 @@ func GetAllDomain(ctx context.Context) ([]string, error) {
 	return insWatherByDomainKeys, err
 }
 
+// 判断指定domain是否存在
 func DomainExist(ctx context.Context, domain string) (bool, error) {
 	opts := append(FromContext(ctx),
 		registry.WithStrKey(apt.GenerateDomainKey(domain)),
@@ -73,6 +74,7 @@ func DomainExist(ctx context.Context, domain string) (bool, error) {
 	return rsp.Count > 0, nil
 }
 
+// 判断指定project 是否存在
 func ProjectExist(ctx context.Context, domain, project string) (bool, error) {
 	opts := append(FromContext(ctx),
 		registry.WithStrKey(apt.GenerateProjectKey(domain, project)),
@@ -84,6 +86,7 @@ func ProjectExist(ctx context.Context, domain, project string) (bool, error) {
 	return rsp.Count > 0, nil
 }
 
+// 创建domain
 func NewDomain(ctx context.Context, domain string) (bool, error) {
 	ok, err := backend.Registry().PutNoOverride(ctx,
 		registry.WithStrKey(apt.GenerateDomainKey(domain)))
@@ -93,6 +96,7 @@ func NewDomain(ctx context.Context, domain string) (bool, error) {
 	return ok, nil
 }
 
+// 创建project
 func NewProject(ctx context.Context, domain, project string) (bool, error) {
 	ok, err := backend.Registry().PutNoOverride(ctx,
 		registry.WithStrKey(apt.GenerateProjectKey(domain, project)))
@@ -102,7 +106,9 @@ func NewProject(ctx context.Context, domain, project string) (bool, error) {
 	return ok, nil
 }
 
+// etcd 创建domain   project
 func NewDomainProject(ctx context.Context, domain, project string) error {
+	// 直接冲etce查询domain是否存在
 	copyCtx := util.SetContext(util.CloneContext(ctx), util.CtxCacheOnly, "1")
 	ok, err := DomainExist(copyCtx, domain)
 	if !ok && err == nil {

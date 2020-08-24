@@ -35,6 +35,7 @@ import (
 	"time"
 )
 
+// 创建service 黑白名单
 func (s *MicroServiceService) AddRule(ctx context.Context, in *pb.AddServiceRulesRequest) (*pb.AddServiceRulesResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -69,6 +70,7 @@ func (s *MicroServiceService) AddRule(ctx context.Context, in *pb.AddServiceRule
 		return response, nil
 	}
 
+	// 获取已存在的rule 类型
 	ruleType, _, err := serviceUtil.GetServiceRuleType(ctx, domainProject, in.ServiceId)
 	if err != nil {
 		return &pb.AddServiceRulesResponse{
@@ -100,7 +102,7 @@ func (s *MicroServiceService) AddRule(ctx context.Context, in *pb.AddServiceRule
 		// 产生全局rule id
 		timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 		ruleAdd := &pb.ServiceRule{
-			RuleId:       util.GenerateUUID(),
+			RuleId:       util.GenerateUUID(), //没用plugin
 			RuleType:     rule.RuleType,
 			Attribute:    rule.Attribute,
 			Pattern:      rule.Pattern,
@@ -122,9 +124,11 @@ func (s *MicroServiceService) AddRule(ctx context.Context, in *pb.AddServiceRule
 			}, err
 		}
 
+		// etcd 添加
 		opts = append(opts, registry.OpPut(registry.WithStrKey(key), registry.WithValue(data)))
 		opts = append(opts, registry.OpPut(registry.WithStrKey(indexKey), registry.WithStrValue(ruleAdd.RuleId)))
 	}
+	// 全部以存在
 	if len(opts) <= 0 {
 		log.Infof("add service[%s] rule successfully, no rules to add, operator: %s",
 			in.ServiceId, remoteIP)
@@ -133,6 +137,7 @@ func (s *MicroServiceService) AddRule(ctx context.Context, in *pb.AddServiceRule
 		}, nil
 	}
 
+	// 保证serviceId以存在
 	resp, err := backend.BatchCommitWithCmp(ctx, opts,
 		[]registry.CompareOp{registry.OpCmp(
 			registry.CmpVer(util.StringToBytesWithNoCopy(apt.GenerateServiceKey(domainProject, in.ServiceId))),

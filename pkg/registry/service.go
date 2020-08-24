@@ -20,8 +20,10 @@ package registry
 type MicroService struct {
 	// 完成注册时更新
 	ServiceId    string             `protobuf:"bytes,1,opt,name=serviceId" json:"serviceId,omitempty"`
+	// 默认 default
 	AppId        string             `protobuf:"bytes,2,opt,name=appId" json:"appId,omitempty"`
 	ServiceName  string             `protobuf:"bytes,3,opt,name=serviceName" json:"serviceName,omitempty"`
+	// 版本号
 	Version      string             `protobuf:"bytes,4,opt,name=version" json:"version,omitempty"`
 	Description  string             `protobuf:"bytes,5,opt,name=description" json:"description,omitempty"`
 	Level        string             `protobuf:"bytes,6,opt,name=level" json:"level,omitempty"`
@@ -32,6 +34,7 @@ type MicroService struct {
 	// 注册时间
 	Timestamp    string             `protobuf:"bytes,11,opt,name=timestamp" json:"timestamp,omitempty"`
 	Providers    []*MicroServiceKey `protobuf:"bytes,12,rep,name=providers" json:"providers,omitempty"`
+	// 别名
 	Alias        string             `protobuf:"bytes,13,opt,name=alias" json:"alias,omitempty"`
 	LBStrategy   map[string]string  `protobuf:"bytes,14,rep,name=LBStrategy" json:"LBStrategy,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	ModTimestamp string             `protobuf:"bytes,15,opt,name=modTimestamp" json:"modTimestamp,omitempty"`

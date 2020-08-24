@@ -254,6 +254,7 @@ func (s *InstanceService) Register(ctx context.Context, in *pb.RegisterInstanceR
 	}, nil
 }
 
+// 取消instance注册
 func (s *InstanceService) Unregister(ctx context.Context, in *pb.UnregisterInstanceRequest) (*pb.UnregisterInstanceResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 
@@ -270,6 +271,7 @@ func (s *InstanceService) Unregister(ctx context.Context, in *pb.UnregisterInsta
 
 	instanceFlag := util.StringJoin([]string{serviceID, instanceID}, "/")
 
+	// 删除instance
 	err := revokeInstance(ctx, domainProject, serviceID, instanceID)
 	if err != nil {
 		log.Errorf(err, "unregister instance failed, instance[%s], operator %s: revoke instance failed", instanceFlag, remoteIP)
@@ -288,7 +290,9 @@ func (s *InstanceService) Unregister(ctx context.Context, in *pb.UnregisterInsta
 	}, nil
 }
 
+// 删除instance 删除租约
 func revokeInstance(ctx context.Context, domainProject string, serviceID string, instanceID string) *scerr.Error {
+	// 获取leaseID
 	leaseID, err := serviceUtil.GetLeaseID(ctx, domainProject, serviceID, instanceID)
 	if err != nil {
 		return scerr.NewError(scerr.ErrUnavailableBackend, err.Error())

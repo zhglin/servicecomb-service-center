@@ -34,6 +34,7 @@ import (
 // 1. report service metrics
 // 2. save the new domain & project mapping
 // 3. reset the find instance cache
+// service类型  监控  创建domain  project   删除本地cache
 type ServiceEventHandler struct {
 }
 
@@ -51,12 +52,14 @@ func (h *ServiceEventHandler) OnEvent(evt discovery.KvEvent) {
 		idx := strings.Index(domainProject, "/")
 		newDomain := domainProject[:idx]
 		newProject := domainProject[idx+1:]
+		// init,create事件 创建 domain project
 		err := serviceUtil.NewDomainProject(context.Background(), newDomain, newProject)
 		if err != nil {
 			log.Errorf(err, "new domain[%s] or project[%s] failed", newDomain, newProject)
 		}
 		metrics.ReportServices(newDomain, fn, fv, 1)
 	case pb.EVT_DELETE:
+		// delete事件不删domain project
 		domainName := domainProject[:strings.Index(domainProject, "/")]
 		metrics.ReportServices(domainName, fn, fv, -1)
 	default:
@@ -70,6 +73,7 @@ func (h *ServiceEventHandler) OnEvent(evt discovery.KvEvent) {
 		evt.Type, ms.ServiceId, ms.Environment, ms.AppId, ms.ServiceName, ms.Version)
 
 	// cache
+	// 删除本地查询cache
 	providerKey := proto.MicroServiceToKey(domainProject, ms)
 	cache.FindInstances.Remove(providerKey)
 }

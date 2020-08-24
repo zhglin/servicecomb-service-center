@@ -27,6 +27,7 @@ import (
 	scerr "github.com/apache/servicecomb-service-center/server/scerror"
 )
 
+// etcd添加tag
 func AddTagIntoETCD(ctx context.Context, domainProject string, serviceID string, dataTags map[string]string) *scerr.Error {
 	key := apt.GenerateServiceTagKey(domainProject, serviceID)
 	data, err := json.Marshal(dataTags)
@@ -34,6 +35,7 @@ func AddTagIntoETCD(ctx context.Context, domainProject string, serviceID string,
 		return scerr.NewError(scerr.ErrInternal, err.Error())
 	}
 
+	// 保证serviceId已存在
 	resp, err := backend.Registry().TxnWithCmp(ctx,
 		[]registry.PluginOp{registry.OpPut(registry.WithStrKey(key), registry.WithValue(data))},
 		[]registry.CompareOp{registry.OpCmp(
@@ -49,6 +51,7 @@ func AddTagIntoETCD(ctx context.Context, domainProject string, serviceID string,
 	return nil
 }
 
+// 获取serviceId的tags
 func GetTagsUtils(ctx context.Context, domainProject, serviceID string) (tags map[string]string, err error) {
 	key := apt.GenerateServiceTagKey(domainProject, serviceID)
 	opts := append(FromContext(ctx), registry.WithStrKey(key))

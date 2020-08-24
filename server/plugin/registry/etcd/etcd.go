@@ -352,8 +352,10 @@ func (c *Client) toCompares(cmps []registry.CompareOp) []clientv3.Cmp {
 	return etcdCmps
 }
 
+// etcd写入key
 func (c *Client) PutNoOverride(ctx context.Context, opts ...registry.PluginOpOption) (bool, error) {
 	op := registry.OpPut(opts...)
+	// 保证key不存在
 	resp, err := c.TxnWithCmp(ctx, []registry.PluginOp{op}, []registry.CompareOp{
 		registry.OpCmp(registry.CmpCreateRev(op.Key), registry.CmpEqual, 0),
 	}, nil)
@@ -363,6 +365,7 @@ func (c *Client) PutNoOverride(ctx context.Context, opts ...registry.PluginOpOpt
 	}
 	return resp.Succeeded, nil
 }
+
 // etcd 分页查询
 func (c *Client) paging(ctx context.Context, op registry.PluginOp) (*clientv3.GetResponse, error) {
 	var etcdResp *clientv3.GetResponse
@@ -660,6 +663,7 @@ func (c *Client) LeaseRenew(ctx context.Context, leaseID int64) (int64, error) {
 	return etcdResp.TTL, nil
 }
 
+// 删除租约
 func (c *Client) LeaseRevoke(ctx context.Context, leaseID int64) error {
 	var err error
 

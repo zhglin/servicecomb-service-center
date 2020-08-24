@@ -66,6 +66,7 @@ func GetService(ctx context.Context, domainProject string, serviceID string) (*p
 }
 
 // GetServiceFromCache gets service from cache
+// 直从本地cache获取service
 func GetServiceFromCache(domainProject string, serviceID string) *pb.MicroService {
 	ctx := context.WithValue(context.WithValue(context.Background(),
 		util.CtxCacheOnly, "1"),
@@ -235,6 +236,7 @@ FIND_RULE:
 	return match(resp.Kvs), true, nil
 }
 
+// 校验serviceId是否存在
 func ServiceExist(ctx context.Context, domainProject string, serviceID string) bool {
 	opts := append(FromContext(ctx),
 		registry.WithStrKey(apt.GenerateServiceKey(domainProject, serviceID)),
@@ -301,6 +303,7 @@ func GetOneDomainProjectInstanceCount(ctx context.Context, domainProject string)
 	return resp.Count, nil
 }
 
+// 设置service的默认数据
 func SetServiceDefaultValue(service *pb.MicroService) {
 	if len(service.AppId) == 0 {
 		service.AppId = proto.APP_ID

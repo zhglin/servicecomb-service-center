@@ -31,6 +31,7 @@ func FromContext(ctx context.Context) []registry.PluginOpOption {
 	case ctx.Value(util.CtxCacheOnly) == "1":
 		opts = append(opts, registry.WithCacheOnly())
 	}
+	// 是否全量 discovery.aggregate类型
 	if ctx.Value(util.CtxGlobal) == "1" {
 		opts = append(opts, registry.WithGlobal())
 	}

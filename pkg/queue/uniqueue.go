@@ -39,6 +39,7 @@ func (uq *UniQueue) Get(ctx context.Context) interface{} {
 func (uq *UniQueue) Chan() <-chan interface{} {
 	return uq.queue
 }
+
 // 加入一个item
 func (uq *UniQueue) Put(value interface{}) (e error) {
 	// 已经close的 再put
@@ -64,6 +65,7 @@ func (uq *UniQueue) Put(value interface{}) (e error) {
 	}
 	return
 }
+
 // 安全的关闭
 func (uq *UniQueue) Close() {
 	select {

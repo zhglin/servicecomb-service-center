@@ -37,10 +37,11 @@ type URLPattern struct {
 	Path   string
 }
 
+// path对应的handler
 type urlPatternHandler struct {
-	Name string
-	Path string
-	http.Handler
+	Name string	// Route中Func名称
+	Path string // Route的Path
+	http.Handler // Route的Func
 }
 
 // Route is a http route
@@ -50,10 +51,12 @@ type Route struct {
 	// Path contains a path pattern
 	Path string
 	// rest callback function for the specified Method and Path
+	// func(w http.ResponseWriter, r *http.Request),handlerFunc类型,本身实现了ServeHTTP方法
 	Func func(w http.ResponseWriter, r *http.Request)
 }
 
 // ROAServantService defines a group of Routes
+// 能被注册的service类型
 type ROAServantService interface {
 	URLPatterns() []Route
 }
@@ -62,12 +65,14 @@ type ROAServantService interface {
 // Attention:
 //   1. not thread-safe, must be initialized completely before serve http request
 //   2. redirect not supported
+// 支持内部自定义匹配规则
 type ROAServerHandler struct {
 	handlers  map[string][]*urlPatternHandler
 	chainName string
 }
 
 // NewROAServerHander news an ROAServerHandler
+// http handler
 func NewROAServerHander() *ROAServerHandler {
 	return &ROAServerHandler{
 		handlers: make(map[string][]*urlPatternHandler),
@@ -76,6 +81,7 @@ func NewROAServerHander() *ROAServerHandler {
 
 // RegisterServant registers a ROAServantService
 // servant must be an pointer to service object
+// 已struct的形式进行注册
 func (roa *ROAServerHandler) RegisterServant(servant interface{}) {
 	val := reflect.ValueOf(servant)
 	ind := reflect.Indirect(val)
@@ -86,26 +92,31 @@ func (roa *ROAServerHandler) RegisterServant(servant interface{}) {
 		return
 	}
 
+	// 是否存在URLPatterns函数
 	urlPatternFunc := val.MethodByName("URLPatterns")
 	if !urlPatternFunc.IsValid() {
 		log.Errorf(nil, "<rest.RegisterServant> no 'URLPatterns' function in servant struct `%s`", name)
 		return
 	}
 
+	// 调用URLPatterns函数
 	vals := urlPatternFunc.Call([]reflect.Value{})
 	if len(vals) <= 0 {
 		log.Errorf(nil, "<rest.RegisterServant> call 'URLPatterns' function failed in servant struct `%s`", name)
 		return
 	}
 
+	// URLPatterns值返回一个参数 所以只取vals[0]
 	val0 := vals[0]
-	if !val.CanInterface() {
+	if !val.CanInterface() { // 能否不panic的调用interface()
 		log.Errorf(nil, "<rest.RegisterServant> result of 'URLPatterns' function not interface type in servant struct `%s`", name)
 		return
 	}
 
+	// 转换成Interface类型之后进一步转换类型
 	if routes, ok := val0.Interface().([]Route); ok {
 		log.Infof("register servant %s", name)
+		// 添加到route
 		for _, route := range routes {
 			err := roa.addRoute(&route)
 			if err != nil {
@@ -117,12 +128,15 @@ func (roa *ROAServerHandler) RegisterServant(servant interface{}) {
 	}
 }
 
+// 设置个名字,关联个对应的chain
 func (roa *ROAServerHandler) setChainName(name string) {
 	roa.chainName = name
 }
 
+//为handler添加route
 func (roa *ROAServerHandler) addRoute(route *Route) (err error) {
 	method := strings.ToUpper(route.Method)
+	// 不是合法的http method  || 不是以/开头  || Func为nil
 	if !isValidMethod(method) || !strings.HasPrefix(route.Path, "/") || route.Func == nil {
 		message := fmt.Sprintf("Invalid route parameters(method: %s, path: %s)", method, route.Path)
 		log.Errorf(nil, message)
@@ -137,9 +151,12 @@ func (roa *ROAServerHandler) addRoute(route *Route) (err error) {
 }
 
 // ServeHTTP implements http.Handler
+// 匹配到路径之后的回调函数 进行内部的路由匹配
 func (roa *ROAServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, ph := range roa.handlers[r.Method] {
+		// 能匹配到当前roa
 		if params, ok := ph.try(r.URL.Path); ok {
+			// 如果有动态参数,重新进行get参数拼接
 			if len(params) > 0 {
 				r.URL.RawQuery = params + r.URL.RawQuery
 			}
@@ -149,12 +166,14 @@ func (roa *ROAServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 对应的method都没匹配到
 	allowed := make([]string, 0, len(roa.handlers))
 	for method, handlers := range roa.handlers {
 		if method == r.Method {
 			continue
 		}
 
+		// 能不能匹配到别的method的地址
 		for _, ph := range handlers {
 			if _, ok := ph.try(r.URL.Path); ok {
 				allowed = append(allowed, method)
@@ -162,17 +181,20 @@ func (roa *ROAServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// path都匹配不上
 	if len(allowed) == 0 {
 		http.NotFound(w, r)
 		return
 	}
 
+	// 把能匹配的method写入allow头
 	w.Header().Add(HeaderAllow, util.StringJoin(allowed, ", "))
 	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 }
 
 func (roa *ROAServerHandler) serve(ph *urlPatternHandler, w http.ResponseWriter, r *http.Request) {
 	ctx := util.NewStringContext(r.Context())
+	// 替换context
 	if ctx != r.Context() {
 		nr := r.WithContext(ctx)
 		*r = *nr
@@ -208,23 +230,30 @@ func (roa *ROAServerHandler) serve(ph *urlPatternHandler, w http.ResponseWriter,
 			})
 }
 
+// 根据path判断能否匹配上当前的urlPatternHandler
 func (roa *urlPatternHandler) try(path string) (p string, _ bool) {
+	// j标识roa.path的匹配位置  	l标识roa.path长度
+	// i标识path的匹配位置		sl标识path长度
 	var i, j int
 	l, sl := len(roa.Path), len(path)
 	for i < sl {
 		switch {
 		case j >= l:
+			// 长度不同,path>roa.path, roa.Path是否是/结尾的子树
 			if roa.Path != "/" && l > 0 && roa.Path[l-1] == '/' {
 				return p, true
 			}
 			return "", false
-		case roa.Path[j] == ':':
+		case roa.Path[j] == ':':  // 处理动态参数
 			var val string
 			var nextc byte
 			o := j
+			// ASCII字符表 0代表空字符
+			// 匹配出来:到/的 参数名 调整j的值
 			_, nextc, j = match(roa.Path, isAlnum, 0, j+1)
+			// 匹配参数名对应的val 调整i
 			val, _, i = match(path, matchParticial, nextc, i)
-
+			// 构建k=v形式的get参数
 			p += url.QueryEscape(roa.Path[o:j]) + "=" + url.QueryEscape(val) + "&"
 		case path[i] == roa.Path[j]:
 			i++
@@ -233,6 +262,7 @@ func (roa *urlPatternHandler) try(path string) (p string, _ bool) {
 			return "", false
 		}
 	}
+	// roa.path > path 未匹配上
 	if j != l {
 		return "", false
 	}
@@ -263,6 +293,7 @@ func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
 }
 
+// 是否是合法的字符 不包括/
 func isAlnum(ch byte) bool {
 	return isAlpha(ch) || isDigit(ch)
 }
