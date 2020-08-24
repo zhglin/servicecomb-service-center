@@ -75,6 +75,9 @@ type ServerConfig struct {
 	//CacheTTL is the ttl of cache discovery
 	//缓存清理间隔，未设置就永远不清理
 	CacheTTL time.Duration `json:"cacheTTL"`
+
+	// if want disable Test Schema, SchemaDisable set true
+	SchemaDisable bool `json:"schemaDisable"`
 }
 
 // version 会读取etcd中的全局版本号进行更新 默认是0
