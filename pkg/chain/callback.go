@@ -40,22 +40,25 @@ func (r Result) String() string {
 	return r.Err.Error()
 }
 
+// http.Handler的回调函数
 type Callback struct {
-	Func  CallbackFunc
+	Func  CallbackFunc // 这里会有多个CallbackFunc
 	Async bool
 }
 
+// 触发执行callBack.Func
 func (cb *Callback) Invoke(r Result) {
-	if cb.Async {
+	if cb.Async { // 异步执行
 		pool.Do(func(_ context.Context) {
 			cb.Func(r)
 		})
 		return
 	}
-	defer log.Recover()
+	defer log.Recover()  //处理Callback的panic
 	cb.Func(r)
 }
 
+// chain有失败时的调用
 func (cb *Callback) Fail(err error, args ...interface{}) {
 	cb.Invoke(Result{
 		OK:   false,
@@ -64,6 +67,7 @@ func (cb *Callback) Fail(err error, args ...interface{}) {
 	})
 }
 
+// 成功时的调用
 func (cb *Callback) Success(args ...interface{}) {
 	cb.Invoke(Result{
 		OK:   true,

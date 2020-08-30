@@ -34,16 +34,17 @@ const (
 	PostSignal
 )
 
+//https://www.lmlphp.com/user/1234/article/item/29949/  Golang中的优雅重启
 var (
-	isFork         bool
+	isFork         bool				//标记是否是子进程
 	filesOrder     string
-	files          []*os.File
-	filesOffsetMap map[string]int
+	files          []*os.File       // listener的链接，被新进程继承
+	filesOffsetMap map[string]int   // listener的链接 索引
 
-	registerSignals []os.Signal
-	SignalHooks     map[int]map[os.Signal][]func()
+	registerSignals []os.Signal 	// 监听的信号
+	SignalHooks     map[int]map[os.Signal][]func() // 信号的前置，后置的处理函数
 	graceMux        sync.Mutex
-	forked          bool
+	forked          bool	// 标记开始复制
 )
 
 func init() {
@@ -51,12 +52,14 @@ func init() {
 	flag.StringVar(&filesOrder, "filesorder", "", "previous initialization FDs order")
 
 	registerSignals = []os.Signal{
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGKILL,
-		syscall.SIGTERM,
+		syscall.SIGHUP, //用户终端连接(正常或非正常)结束时发出, 通常是在终端的控制进程结束时, 通知同一session内的各个作业, 这时它们与控制终端不再关联。
+		syscall.SIGINT, //程序终止(interrupt)信号, 在用户键入INTR字符(通常是Ctrl+C)时发出，用于通知前台进程组终止进程
+		syscall.SIGKILL,//用来立即结束程序的运行. 本信号不能被阻塞、处理和忽略。
+		syscall.SIGTERM,//程序结束(terminate)信号, 与SIGKILL不同的是该信号可以被阻塞和处理。通常用来要求程序自己正常退出，shell命令kill缺省产生这个信号
 	}
 	filesOffsetMap = make(map[string]int)
+
+	// 监听信号的前置后置处理函数
 	SignalHooks = map[int]map[os.Signal][]func(){
 		PreSignal:  {},
 		PostSignal: {},
@@ -83,6 +86,7 @@ func After(f func()) {
 	RegisterSignalHook(PostSignal, f, registerSignals[1:]...)
 }
 
+// 提供的注册函数
 func RegisterSignalHook(phase int, f func(), sigs ...os.Signal) {
 	for s := range SignalHooks[phase] {
 		for _, sig := range sigs {
@@ -93,6 +97,7 @@ func RegisterSignalHook(phase int, f func(), sigs ...os.Signal) {
 	}
 }
 
+// 注册需要被子进程继承的文件描述符
 func RegisterFiles(name string, f *os.File) {
 	if f == nil {
 		return
@@ -103,6 +108,7 @@ func RegisterFiles(name string, f *os.File) {
 	graceMux.Unlock()
 }
 
+// 执行信号的前置或后置函数
 func fireSignalHook(ppFlag int, sig os.Signal) {
 	if _, notSet := SignalHooks[ppFlag][sig]; !notSet {
 		return
@@ -112,6 +118,7 @@ func fireSignalHook(ppFlag int, sig os.Signal) {
 	}
 }
 
+// 处理信号
 func handleSignals() {
 
 	sigCh := make(chan os.Signal, 1)
@@ -120,7 +127,7 @@ func handleSignals() {
 	for sig := range sigCh {
 		fireSignalHook(PreSignal, sig)
 		switch sig {
-		case syscall.SIGHUP:
+		case syscall.SIGHUP: // 启动后关闭终端 damon
 			log.Debugf("received signal '%v', now forking", sig)
 			err := fork()
 			if err != nil {
@@ -131,6 +138,7 @@ func handleSignals() {
 	}
 }
 
+// 复制已启动的进程
 func fork() (err error) {
 	graceMux.Lock()
 	defer graceMux.Unlock()
@@ -145,11 +153,12 @@ func fork() (err error) {
 	}
 
 	// add fork and file descriptions order flags
-	args := append(parseCommandLine(), "-fork")
+	args := append(parseCommandLine(), "-fork")   // 标记isFork=true
 	if len(filesOffsetMap) > 0 {
 		args = append(args, fmt.Sprintf(`-filesorder=%s`, strings.Join(orderArgs, ",")))
 	}
 
+	// 执行
 	if err = newCommand(args...); err != nil {
 		log.Errorf(err, "fork a process failed, %v", args)
 		return
@@ -158,13 +167,14 @@ func fork() (err error) {
 	return
 }
 
+// 解析当前进程的命令行参数，第一个是程序名
 func parseCommandLine() (args []string) {
 	if len(os.Args) <= 1 {
 		return
 	}
 	// ignore process path
 	for _, arg := range os.Args[1:] {
-		if arg == "-fork" {
+		if arg == "-fork" {  // 去掉后面的-fork -filesorder
 			// ignore fork flags
 			break
 		}
@@ -173,14 +183,16 @@ func parseCommandLine() (args []string) {
 	return
 }
 
+// 执行命令
 func newCommand(args ...string) error {
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.ExtraFiles = files
+	cmd.ExtraFiles = files // 指定额外被新进程继承的已打开文件流
 	return cmd.Start()
 }
 
+// 是否是子进程
 func IsFork() bool {
 	return isFork
 }
@@ -198,7 +210,9 @@ func ExtraFileOrder(name string) int {
 	return -1
 }
 
+// 复制完成后关闭父进程
 func Done() error {
+	// 不是子进程
 	if !IsFork() {
 		return nil
 	}

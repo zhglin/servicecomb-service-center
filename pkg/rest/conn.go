@@ -21,13 +21,15 @@ import (
 	"net"
 )
 
+// 与客户端已经建立起来的连接
 type restConn struct {
 	net.Conn
 	server *Server
 }
 
+// 自动调用
 func (c restConn) Close() (err error) {
 	err = c.Conn.Close()
-	c.server.CloseOne()
+	c.server.CloseOne()  // 减少链接数
 	return
 }

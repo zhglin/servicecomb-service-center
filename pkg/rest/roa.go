@@ -22,9 +22,11 @@ import (
 )
 
 var (
+	// 默认的http.Handler
 	serverHandler *ROAServerHandler // serverHandler is the default handler
 )
 
+// 初始化默认的http.Handler，设置name
 func init() {
 	serverHandler = NewROAServerHander()
 	serverHandler.setChainName(ServerChainName)
@@ -32,11 +34,13 @@ func init() {
 
 // RegisterServant registers a ROAServantService into serverHandler
 // servant must be an pointer to service object
+// 在serviceHandler中注册路由
 func RegisterServant(servant interface{}) {
 	serverHandler.RegisterServant(servant)
 }
 
 //GetRouter return the router fo REST service
+// 只是返回默认的serverHandler
 func GetRouter() http.Handler {
 	return serverHandler
 }

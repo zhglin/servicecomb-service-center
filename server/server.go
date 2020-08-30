@@ -67,6 +67,7 @@ func (s *ServiceCenterServer) Run() {
 	s.waitForQuit()
 }
 
+// 阻塞apiService.server
 func (s *ServiceCenterServer) waitForQuit() {
 	err := <-s.apiService.Err()
 	if err != nil {
@@ -228,10 +229,11 @@ func (s *ServiceCenterServer) startServices() {
 		s.clearNoInstanceServices()
 	}
 
-	// api service
+	// api service  启动api server
 	s.startAPIService()
 }
 
+// 启动api server
 func (s *ServiceCenterServer) startAPIService() {
 	restIP := beego.AppConfig.String("httpaddr")
 	restPort := beego.AppConfig.String("httpport")

@@ -22,19 +22,19 @@ import (
 )
 
 type ServerConfig struct {
-	MaxHeaderBytes int64 `json:"maxHeaderBytes"`
-	MaxBodyBytes   int64 `json:"maxBodyBytes"`
+	MaxHeaderBytes int64 `json:"maxHeaderBytes"` // rest 请求的头域最大长度
+	MaxBodyBytes   int64 `json:"maxBodyBytes"` // rest 读取的最大body 限制接收到的请求的Body的大小
 
-	ReadHeaderTimeout string `json:"readHeaderTimeout"`
-	ReadTimeout       string `json:"readTimeout"`
-	IdleTimeout       string `json:"idleTimeout"`
-	WriteTimeout      string `json:"writeTimeout"`
+	ReadHeaderTimeout string `json:"readHeaderTimeout"` // rest server配置 允许读取请求头的时间
+	ReadTimeout       string `json:"readTimeout"` // rest server配置 读取整个文件的最大持续时间,包括正文。
+	IdleTimeout       string `json:"idleTimeout"` // rest server配置 等待的最大时间 keep-live
+	WriteTimeout      string `json:"writeTimeout"` // rest server配置 写入response的超时时间
 
 	LimitTTLUnit     string `json:"limitTTLUnit"`
 	LimitConnections int64  `json:"limitConnections"`
 	LimitIPLookup    string `json:"limitIPLookup"`
 
-	SslEnabled    bool   `json:"sslEnabled,string"`
+	SslEnabled    bool   `json:"sslEnabled,string"` // rest 是否开启ssl
 	SslMinVersion string `json:"sslMinVersion"`
 	SslVerifyPeer bool   `json:"sslVerifyPeer,string"`
 	SslCiphers    string `json:"sslCiphers"`
@@ -55,6 +55,7 @@ type ServerConfig struct {
 	LogLevel        string `json:"-"`
 	LogFormat       string `json:"-"`
 	LogSys          bool   `json:"-"`
+	// 是否记录请求成功日志
 	EnableAccessLog bool   `json:"-"`
 	AccessLogFile   string `json:"-"`
 

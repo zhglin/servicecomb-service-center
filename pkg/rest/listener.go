@@ -23,6 +23,7 @@ import (
 	"syscall"
 )
 
+// 系统的net.Listener转换为TCPListener，控制conn链接数
 type TCPListener struct {
 	net.Listener
 	stopCh chan error
@@ -30,6 +31,7 @@ type TCPListener struct {
 	server *Server
 }
 
+// 内部的TCPListener 管理net.Listener
 func NewTCPListener(l net.Listener, srv *Server) (el *TCPListener) {
 	el = &TCPListener{
 		Listener: l,
@@ -37,18 +39,20 @@ func NewTCPListener(l net.Listener, srv *Server) (el *TCPListener) {
 		server:   srv,
 	}
 	go func() {
-		<-el.stopCh
+		<-el.stopCh  // 阻塞chain，Close的调用会解除阻塞并调用Listen.close
 		el.stopCh <- el.Listener.Close()
 	}()
 	return
 }
 
+// 接受请求
 func (rl *TCPListener) Accept() (c net.Conn, err error) {
 	tc, err := rl.Listener.(*net.TCPListener).AcceptTCP()
 	if err != nil {
 		return
 	}
 
+	// 设置tcp链接的keepalive
 	if rl.server.KeepaliveTimeout > 0 {
 		if err := tc.SetKeepAlive(true); err != nil {
 			return nil, err
@@ -64,17 +68,19 @@ func (rl *TCPListener) Accept() (c net.Conn, err error) {
 		server: rl.server,
 	}
 
+	// 设置链接数
 	rl.server.AcceptOne()
 	return
 }
 
+// 关闭链接
 func (rl *TCPListener) Close() error {
 	if rl.closed {
 		return syscall.EINVAL
 	}
 	rl.closed = true
-	rl.stopCh <- nil
-	return <-rl.stopCh
+	rl.stopCh <- nil   // 触发rl.Listener.Close()
+	return <-rl.stopCh // 阻塞等待rl.Listener.Close()
 }
 
 func (rl *TCPListener) File() *os.File {

@@ -42,6 +42,7 @@ type Handler struct {
 // AddWhiteListAPIs adds APIs to white list, where the APIs will be ignored
 // in access log.
 // Not safe for concurrent use.
+// 白名单 不记录日志
 func (h *Handler) AddWhiteListAPIs(apis ...string) {
 	for _, api := range apis {
 		h.whiteListAPIs[api] = struct{}{}
@@ -49,6 +50,7 @@ func (h *Handler) AddWhiteListAPIs(apis ...string) {
 }
 
 // ShouldIgnoreAPI judges whether the API should be ignored in access log.
+// 是否不记录日志
 func (h *Handler) ShouldIgnoreAPI(api string) bool {
 	_, ok := h.whiteListAPIs[api]
 	return ok
@@ -56,11 +58,13 @@ func (h *Handler) ShouldIgnoreAPI(api string) bool {
 
 // Handle handles the request
 func (h *Handler) Handle(i *chain.Invocation) {
+	// 是否白名单
 	matchPattern := i.Context().Value(rest.CtxMatchPattern).(string)
 	if h.ShouldIgnoreAPI(matchPattern) {
 		i.Next()
 		return
 	}
+
 	startTimeStr := "unknown"
 	start, ok := i.Context().Value(svr.CtxStartTimestamp).(time.Time)
 	if ok {
@@ -68,6 +72,8 @@ func (h *Handler) Handle(i *chain.Invocation) {
 	}
 	r := i.Context().Value(rest.CtxRequest).(*http.Request)
 	w := i.Context().Value(rest.CtxResponse).(http.ResponseWriter)
+
+	// 注册异步的callback, 在api请求处理后执行, 统计时间不包括后续的callback
 	i.Next(chain.WithAsyncFunc(func(_ chain.Result) {
 		delayByMillisecond := "unknown"
 		if ok {
@@ -117,5 +123,7 @@ func RegisterHandlers() {
 		"/registry/v3/microservices/:serviceId/instances/:instanceId/heartbeat",
 		"/registry/v3/heartbeats",
 		"")
+
+	// 注册
 	chain.RegisterHandler(rest.ServerChainName, h)
 }

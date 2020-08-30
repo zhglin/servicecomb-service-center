@@ -24,12 +24,15 @@ import (
 
 const CapSize = 10
 
+// 暂存下chain中使用的handler，根据chain的名称区分
 var handlersMap = make(map[string][]Handler)
 
+// chain中的handle类型
 type Handler interface {
 	Handle(i *Invocation)
 }
 
+// 注册对应name下的handler
 func RegisterHandler(catalog string, h Handler) {
 	handlers, ok := handlersMap[catalog]
 	if !ok {
@@ -42,6 +45,7 @@ func RegisterHandler(catalog string, h Handler) {
 	log.Infof("register chain handler[%s] %s", catalog, t.Name())
 }
 
+// 获取指定name下的所有handler
 func Handlers(catalog string) []Handler {
 	return handlersMap[catalog]
 }

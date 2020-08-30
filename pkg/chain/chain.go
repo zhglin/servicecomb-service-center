@@ -17,12 +17,13 @@
 
 package chain
 
-// http调用链
+// http调用链  chain中的handler都是依次同步调用
 type Chain struct {
-	// 标识不同路由子树   不同的子树可以设置不同的chain
+	// 标识不同路由子树，不同的子树可以设置不同的chain
 	name         string
-	//
+	// handler
 	handlers     []Handler
+	// 已执行到第几个handler
 	currentIndex int
 }
 
@@ -37,15 +38,18 @@ func (c *Chain) Name() string {
 }
 
 func (c *Chain) syncNext(i *Invocation) {
-	// 当前chain中的handlers已全部执行完
+	// 当前chain中的handlers已全部执行完，触发callbackFunc的执行
 	if c.currentIndex >= len(c.handlers)-1 {
 		i.Success()
 		return
 	}
+
+	// 执行下一个currentIndex指定的handle
 	c.currentIndex++
 	c.handlers[c.currentIndex].Handle(i)
 }
 
+// 执行chain中的下一个Handler
 func (c *Chain) Next(i *Invocation) {
 	c.syncNext(i)
 }

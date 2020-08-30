@@ -34,27 +34,29 @@ import (
 )
 
 const (
-	serverStateInit = iota
-	serverStateRunning
-	serverStateTerminating
-	serverStateClosed
+	serverStateInit = iota   //server 初始化
+	serverStateRunning       //server 已启动
+	serverStateTerminating   //server 关闭中
+	serverStateClosed        //server 已关闭
 )
 
+// rest server配置
 type ServerConfig struct {
 	Addr              string
 	Handler           http.Handler
-	ReadTimeout       time.Duration
-	ReadHeaderTimeout time.Duration
-	IdleTimeout       time.Duration
-	WriteTimeout      time.Duration
-	KeepAliveTimeout  time.Duration
-	GraceTimeout      time.Duration
-	MaxHeaderBytes    int
-	TLSConfig         *tls.Config
-	Compressed        bool
-	CompressMinBytes  int
+	ReadTimeout       time.Duration  //读取相应超时时间，包括body
+	ReadHeaderTimeout time.Duration  //读取相应头的超时时间
+	IdleTimeout       time.Duration  //等待的最大时间 keep-live
+	WriteTimeout      time.Duration  //写入response的超时时间
+	KeepAliveTimeout  time.Duration  //tcp链接的keepAlive时长
+	GraceTimeout      time.Duration  //server关闭的延迟时间 非配置项
+	MaxHeaderBytes    int            //请求的头最大长度
+	TLSConfig         *tls.Config    //ssl配置
+	Compressed        bool  // 是否开启压缩  非配置项 默认开启
+	CompressMinBytes  int   // 使用压缩的临界值 非配置项 默认1.4k
 }
 
+// 默认的rest server配置
 func DefaultServerConfig() *ServerConfig {
 	return &ServerConfig{
 		ReadTimeout:       60 * time.Second,
@@ -99,37 +101,42 @@ func NewServer(srvCfg *ServerConfig) *Server {
 type Server struct {
 	*http.Server
 
-	Network          string
-	KeepaliveTimeout time.Duration
-	GraceTimeout     time.Duration
+	Network          string    // 网络类型 tcp
+	KeepaliveTimeout time.Duration // conn的keepalive时间
+	GraceTimeout     time.Duration //延迟关闭时间
 
-	Listener    net.Listener
+	Listener    net.Listener  // http.Server使用的listener
 	netListener net.Listener
 	tcpListener *TCPListener
 
-	conns int64
+	conns int64  // 链接数
 	wg    sync.WaitGroup
-	state uint8
+	state uint8  // server端链接状态 关闭 开启
 }
 
+// serve listen  tcp的listener
 func (srv *Server) Serve() (err error) {
 	defer func() {
 		srv.state = serverStateClosed
 	}()
 	defer log.Recover()
 	srv.state = serverStateRunning
+	// 转成http 并for调用srv.Listener.Accept
 	err = srv.Server.Serve(srv.Listener)
 	log.Errorf(err, "rest server serve failed")
+	// accept的异常以及关闭，阻塞等待现有conn关闭
 	srv.wg.Wait()
 	return
 }
 
+// 增加链接数
 func (srv *Server) AcceptOne() {
 	defer log.Recover()
 	srv.wg.Add(1)
 	atomic.AddInt64(&srv.conns, 1)
 }
 
+// conn关闭减少链接数
 func (srv *Server) CloseOne() bool {
 	defer log.Recover()
 	for {
@@ -144,6 +151,7 @@ func (srv *Server) CloseOne() bool {
 	}
 }
 
+// 获取tcp的listener
 func (srv *Server) Listen() error {
 	addr := srv.Addr
 	if addr == "" {
@@ -210,6 +218,7 @@ func (srv *Server) RegisterListener(l net.Listener) {
 	srv.netListener = l
 }
 
+// 创建||获取(优雅重启) net.Listener
 func (srv *Server) getOrCreateListener(addr string) (l net.Listener, err error) {
 	if !grace.IsFork() {
 		return srv.newListener(addr)
@@ -220,6 +229,7 @@ func (srv *Server) getOrCreateListener(addr string) (l net.Listener, err error) 
 		return srv.newListener(addr)
 	}
 
+	//索引位置为i的文件描述符传过去，最终会变为值为i+3的文件描述符。ie: 索引为0的文件描述符, 最终变为文件描述符3
 	f := os.NewFile(uintptr(3+offset), "")
 	l, err = net.FileListener(f)
 	if err != nil {
@@ -229,6 +239,7 @@ func (srv *Server) getOrCreateListener(addr string) (l net.Listener, err error) 
 	return
 }
 
+// 创建服务器端链接
 func (srv *Server) newListener(addr string) (net.Listener, error) {
 	l := srv.netListener
 	if l != nil {
@@ -237,22 +248,25 @@ func (srv *Server) newListener(addr string) (net.Listener, error) {
 	return net.Listen(srv.Network, addr)
 }
 
+// 关闭server
 func (srv *Server) Shutdown() {
 	if srv.state != serverStateRunning {
 		return
 	}
 
 	srv.state = serverStateTerminating
+	// 关闭服务端
 	err := srv.Listener.Close()
 	if err != nil {
 		log.Errorf(err, "server listener close failed")
 	}
-
+	//优雅关闭，等待现有conn处理完关闭
 	if srv.GraceTimeout >= 0 {
 		srv.gracefulStop(srv.GraceTimeout)
 	}
 }
 
+// 优雅关闭
 func (srv *Server) gracefulStop(d time.Duration) {
 	if srv.state != serverStateTerminating {
 		return
@@ -275,6 +289,7 @@ func (srv *Server) gracefulStop(d time.Duration) {
 
 	if n != 0 {
 		log.Warnf("%s timed out, force close %d connection(s)", d, n)
+		// 关闭server，并关闭conn
 		err := srv.Server.Close()
 		if err != nil {
 			log.Errorf(err, "server close failed")
@@ -282,6 +297,7 @@ func (srv *Server) gracefulStop(d time.Duration) {
 	}
 }
 
+// 这里获取的是复制的File
 func (srv *Server) File() *os.File {
 	switch srv.Listener.(type) {
 	case *TCPListener:

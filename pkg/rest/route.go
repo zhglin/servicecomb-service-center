@@ -68,7 +68,7 @@ type ROAServantService interface {
 // 支持内部自定义匹配规则
 type ROAServerHandler struct {
 	handlers  map[string][]*urlPatternHandler
-	chainName string
+	chainName string   //通过chainName关联chain中的handler
 }
 
 // NewROAServerHander news an ROAServerHandler
@@ -81,7 +81,7 @@ func NewROAServerHander() *ROAServerHandler {
 
 // RegisterServant registers a ROAServantService
 // servant must be an pointer to service object
-// 已struct的形式进行注册
+// 以struct的形式进行注册
 func (roa *ROAServerHandler) RegisterServant(servant interface{}) {
 	val := reflect.ValueOf(servant)
 	ind := reflect.Indirect(val)
@@ -106,14 +106,14 @@ func (roa *ROAServerHandler) RegisterServant(servant interface{}) {
 		return
 	}
 
-	// URLPatterns值返回一个参数 所以只取vals[0]
+	// URLPatterns只返回一个参数 所以只取vals[0]
 	val0 := vals[0]
 	if !val.CanInterface() { // 能否不panic的调用interface()
 		log.Errorf(nil, "<rest.RegisterServant> result of 'URLPatterns' function not interface type in servant struct `%s`", name)
 		return
 	}
 
-	// 转换成Interface类型之后进一步转换类型
+	// 转换成Interface类型之后进一步转换类型，返回的类型必须是[]Route类型
 	if routes, ok := val0.Interface().([]Route); ok {
 		log.Infof("register servant %s", name)
 		// 添加到route
@@ -128,7 +128,7 @@ func (roa *ROAServerHandler) RegisterServant(servant interface{}) {
 	}
 }
 
-// 设置个名字,关联个对应的chain
+// 设置名字,关联name对应的chain
 func (roa *ROAServerHandler) setChainName(name string) {
 	roa.chainName = name
 }
@@ -200,6 +200,7 @@ func (roa *ROAServerHandler) serve(ph *urlPatternHandler, w http.ResponseWriter,
 		*r = *nr
 	}
 
+	// 创建invocation，从handlersMap中获取chainName对应的handler，丢给invocation
 	inv := chain.NewInvocation(ctx, chain.NewChain(roa.chainName, chain.Handlers(roa.chainName)))
 	inv.WithContext(CtxResponse, w).
 		WithContext(CtxRequest, r).
@@ -207,7 +208,7 @@ func (roa *ROAServerHandler) serve(ph *urlPatternHandler, w http.ResponseWriter,
 		WithContext(CtxMatchFunc, ph.Name).
 		Invoke(
 			func(ret chain.Result) {
-				defer func() {
+				defer func() { // 这里处理的只是ServeHTTP的painc
 					err := ret.Err
 					itf := recover()
 					if itf != nil {
@@ -224,7 +225,7 @@ func (roa *ROAServerHandler) serve(ph *urlPatternHandler, w http.ResponseWriter,
 						return
 					}
 				}()
-				if ret.OK {
+				if ret.OK { // 只有chain中的handler执行成功才会执行
 					ph.ServeHTTP(w, r)
 				}
 			})

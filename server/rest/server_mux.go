@@ -31,11 +31,13 @@ import (
 //   2. if use RegisterServerHandleFunc or RegisterServerHandler:
 //      to register in ServeMux directly
 
+// 默认的子树路由
 const defaultServeMux = "default"
 
 var (
 	// restServer使用的路由  DefaultServerMux 是个引用
 	DefaultServerMux = http.NewServeMux()
+	// 不同的子树对应的serverMux
 	serveMuxMap      = map[string]*http.ServeMux{
 		defaultServeMux: DefaultServerMux,
 	}
@@ -61,10 +63,12 @@ func RegisterServeMuxHandler(name, pattern string, h http.Handler) {
 		name, t.PkgPath(), t.Name(), pattern)
 }
 
+// rest的注册路由函数
 func RegisterServerHandleFunc(pattern string, f http.HandlerFunc) {
 	RegisterServeMuxHandleFunc(defaultServeMux, pattern, f)
 }
 
+// rest的注册路由
 func RegisterServerHandler(pattern string, h http.Handler) {
 	RegisterServeMuxHandler(defaultServeMux, pattern, h)
 }

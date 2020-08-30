@@ -26,7 +26,7 @@ import (
 	"github.com/apache/servicecomb-service-center/server/interceptor"
 )
 
-const CtxStartTimestamp = "x-start-timestamp"
+const CtxStartTimestamp = "x-start-timestamp" // 请求开始处理时间
 
 func init() {
 	// api 注册rest使用的handler
@@ -34,6 +34,7 @@ func init() {
 }
 
 // NewServerHandler news a ServerHandler
+// rest的serverHandler
 func NewServerHandler(h http.Handler) *ServerHandler {
 	return &ServerHandler{
 		Handler: h,
@@ -41,6 +42,7 @@ func NewServerHandler(h http.Handler) *ServerHandler {
 }
 
 // ServerHandler is a http handler for service-center api
+// 这里只是对roa的代理
 type ServerHandler struct {
 	Handler http.Handler
 }
@@ -49,11 +51,13 @@ type ServerHandler struct {
 func (s *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	util.SetRequestContext(r, CtxStartTimestamp, time.Now())
 
+	// 拦截器 执行异常return
 	err := interceptor.InvokeInterceptors(w, r)
 	if err != nil {
 		return
 	}
 
+	// 转调到roa的serveHTTP
 	s.Handler.ServeHTTP(w, r)
 
 	// CAUTION: There will be cause a concurrent problem,

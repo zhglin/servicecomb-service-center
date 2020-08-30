@@ -38,7 +38,7 @@ func init() {
 	InitAPI()
 
 	apiServer = &APIServer{
-		isClose:   true,
+		isClose:   true,  //初始关闭状态
 		err:       make(chan error, 1),
 		goroutine: gopool.New(context.Background()),
 	}
@@ -62,12 +62,12 @@ func (t APIType) String() string {
 }
 
 type APIServer struct {
-	Listeners map[APIType]string
+	Listeners map[APIType]string // api协议对应的ip:port
 
 	restSrv   *rest.Server
 	isClose   bool
-	forked    bool
-	err       chan error
+	forked    bool			// 标记是否重启
+	err       chan error  // 收集error 上游阻塞在chan上
 	goroutine *gopool.Pool
 }
 
@@ -80,10 +80,11 @@ func (s *APIServer) Err() <-chan error {
 	return s.err
 }
 
+// 优雅重启
 func (s *APIServer) graceDone() {
-	grace.Before(s.MarkForked)
-	grace.After(s.Stop)
-	if err := grace.Done(); err != nil {
+	grace.Before(s.MarkForked) // 进行fork重启先标记s.forked=true，不进行instance的下线操作
+	grace.After(s.Stop)			// 重启完关闭apiServer
+	if err := grace.Done(); err != nil {	// 关闭父进程
 		log.Errorf(err, "server reload failed")
 	}
 }
@@ -92,6 +93,7 @@ func (s *APIServer) MarkForked() {
 	s.forked = true
 }
 
+// 添加api协议类型对应的ip，port
 func (s *APIServer) AddListener(t APIType, ip, port string) {
 	if s.Listeners == nil {
 		s.Listeners = map[APIType]string{}
@@ -102,6 +104,7 @@ func (s *APIServer) AddListener(t APIType, ip, port string) {
 	s.Listeners[t] = net.JoinHostPort(ip, port)
 }
 
+// 设置instance的api的ip端口号
 func (s *APIServer) populateEndpoint(t APIType, ipPort string) {
 	if len(ipPort) == 0 {
 		return
@@ -113,6 +116,7 @@ func (s *APIServer) populateEndpoint(t APIType, ipPort string) {
 	core.Instance.Endpoints = append(core.Instance.Endpoints, address)
 }
 
+// 启动rest server
 func (s *APIServer) startRESTServer() (err error) {
 	addr, ok := s.Listeners[REST]
 	if !ok {
@@ -124,8 +128,10 @@ func (s *APIServer) startRESTServer() (err error) {
 	}
 	log.Infof("listen address: %s://%s", REST, s.restSrv.Listener.Addr().String())
 
+	// 记录ip端口号信息
 	s.populateEndpoint(REST, s.restSrv.Listener.Addr().String())
 
+	// 协程开启server
 	s.goroutine.Do(func(_ context.Context) {
 		err := s.restSrv.Serve()
 		if s.isClose {
@@ -137,6 +143,7 @@ func (s *APIServer) startRESTServer() (err error) {
 	return
 }
 
+// 启动
 func (s *APIServer) Start() {
 	if !s.isClose {
 		return
@@ -145,12 +152,14 @@ func (s *APIServer) Start() {
 
 	core.Instance.Endpoints = nil
 
+	// 启动rest api
 	err := s.startRESTServer()
 	if err != nil {
 		s.err <- err
 		return
 	}
 
+	// 优雅重启
 	s.graceDone()
 
 	defer log.Info("api server is ready")
@@ -169,12 +178,14 @@ func (s *APIServer) Start() {
 	}
 }
 
+// 关闭apiServer
 func (s *APIServer) Stop() {
 	if s.isClose {
 		return
 	}
 	s.isClose = true
 
+	// 优雅重启状态不删除instance
 	if !s.forked && core.ServerInfo.Config.SelfRegister {
 		backend.GetRegistryEngine().Stop()
 	}

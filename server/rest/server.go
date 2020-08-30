@@ -25,6 +25,7 @@ import (
 	"time"
 )
 
+// 加载rest配置
 func LoadConfig() (srvCfg *rest.ServerConfig, err error) {
 	srvCfg = rest.DefaultServerConfig()
 	readHeaderTimeout, _ := time.ParseDuration(core.ServerInfo.Config.ReadHeaderTimeout)
@@ -45,10 +46,11 @@ func LoadConfig() (srvCfg *rest.ServerConfig, err error) {
 	srvCfg.WriteTimeout = writeTimeout
 	srvCfg.MaxHeaderBytes = maxHeaderBytes
 	srvCfg.TLSConfig = tlsConfig
-	srvCfg.Handler = DefaultServerMux
+	srvCfg.Handler = DefaultServerMux // 设置http.handler
 	return
 }
 
+// 创建rest server
 func NewServer(ipAddr string) (srv *rest.Server, err error) {
 	srvCfg, err := LoadConfig()
 	if err != nil {

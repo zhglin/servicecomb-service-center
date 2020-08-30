@@ -27,10 +27,10 @@ const (
 	HTTPMethodPost   = http.MethodPost
 	HTTPMethodDelete = http.MethodDelete
 
-	CtxResponse     = "_server_response"
-	CtxRequest      = "_server_request"
-	CtxMatchPattern = "_server_match_pattern"
-	CtxMatchFunc    = "_server_match_func"
+	CtxResponse     = "_server_response"		// response
+	CtxRequest      = "_server_request"			// request
+	CtxMatchPattern = "_server_match_pattern"  	// 注册时的uri
+	CtxMatchFunc    = "_server_match_func"		// 注册的httpHandler函数名
 
 	ServerChainName = "_server_chain"
 
@@ -38,7 +38,7 @@ const (
 
 	HeaderAllow           = "Allow"
 	HeaderHost            = "Host"
-	HeaderServer          = "Server"
+	HeaderServer          = "Server"		//标记server center名称+版本号
 	HeaderContentType     = "Content-Type"
 	HeaderContentEncoding = "Content-Encoding"
 	HeaderAccept          = "Accept"

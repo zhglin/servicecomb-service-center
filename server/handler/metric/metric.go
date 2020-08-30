@@ -31,6 +31,7 @@ type MetricsHandler struct {
 }
 
 func (h *MetricsHandler) Handle(i *chain.Invocation) {
+	// 异步的callback
 	i.Next(chain.WithAsyncFunc(func(ret chain.Result) {
 		start, ok := i.Context().Value(svr.CtxStartTimestamp).(time.Time)
 		if !ok {

@@ -45,6 +45,7 @@ type Handler struct {
 
 func (c *Handler) Handle(i *chain.Invocation) {
 	r := i.Context().Value(rest.CtxRequest).(*http.Request)
+	// 忽略get
 	if r.Method == http.MethodGet {
 		i.Next()
 		return
@@ -57,6 +58,7 @@ func (c *Handler) Handle(i *chain.Invocation) {
 		v = core.ServerInfo.Config.MaxBodyBytes
 	}
 
+	// 限制接收到的请求的Body的大小
 	r.Body = http.MaxBytesReader(w, r.Body, v)
 
 	i.Next()

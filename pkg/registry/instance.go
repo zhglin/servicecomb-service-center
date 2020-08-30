@@ -21,7 +21,9 @@ type MicroServiceInstance struct {
 	InstanceId     string            `protobuf:"bytes,1,opt,name=instanceId" json:"instanceId,omitempty"`
 	// 关联的service id
 	ServiceId      string            `protobuf:"bytes,2,opt,name=serviceId" json:"serviceId,omitempty"`
+	// api的ip:端口号信息
 	Endpoints      []string          `protobuf:"bytes,3,rep,name=endpoints" json:"endpoints,omitempty"`
+	// 机器的hostName
 	HostName       string            `protobuf:"bytes,4,opt,name=hostName" json:"hostName,omitempty"`
 	Status         string            `protobuf:"bytes,5,opt,name=status" json:"status,omitempty"`
 	Properties     map[string]string `protobuf:"bytes,6,rep,name=properties" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`

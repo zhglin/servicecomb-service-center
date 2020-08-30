@@ -34,6 +34,7 @@ func init() {
 	serverName = core.Service.ServiceName + "/" + core.Service.Version
 }
 
+// 校验uri
 func Intercept(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Add(rest.HeaderServer, serverName)
 

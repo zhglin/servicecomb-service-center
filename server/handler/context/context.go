@@ -49,11 +49,13 @@ func (c *Handler) Handle(i *chain.Invocation) {
 		return
 	}
 
+	// 客户端ip
 	i.WithContext("x-remote-ip", util.GetRealIP(r))
 
 	i.Next()
 }
 
+// 不设置context的url类型
 func IsSkip(url string) bool {
 	l, vl, hl := len(url), len("/version"), len("/health")
 	if l >= vl && url[l-vl:] == "/version" {
