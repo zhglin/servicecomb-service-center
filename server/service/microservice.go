@@ -249,6 +249,7 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 		title = "force delete"
 	}
 
+	// 不允许删除service center
 	if serviceID == apt.Service.ServiceId {
 		err := errors.New("not allow to delete service center")
 		log.Errorf(err, "%s micro-service[%s] failed, operator: %s", title, serviceID, remoteIP)
@@ -301,6 +302,7 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 		}
 	}
 
+	// 强制删除
 	serviceIDKey := apt.GenerateServiceKey(domainProject, serviceID)
 	serviceKey := &pb.MicroServiceKey{
 		Tenant:      domainProject,
@@ -310,6 +312,8 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 		Version:     service.Version,
 		Alias:       service.Alias,
 	}
+
+	// 删除service信息
 	opts := []registry.PluginOp{
 		registry.OpDel(registry.WithStrKey(apt.GenerateServiceIndexKey(serviceKey))),
 		registry.OpDel(registry.WithStrKey(apt.GenerateServiceAliasKey(serviceKey))),
@@ -536,6 +540,7 @@ func (s *MicroServiceService) GetServices(ctx context.Context, in *pb.GetService
 	}, nil
 }
 
+// 修改service的properties
 func (s *MicroServiceService) UpdateProperties(ctx context.Context, in *pb.UpdateServicePropsRequest) (*pb.UpdateServicePropsResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -566,7 +571,7 @@ func (s *MicroServiceService) UpdateProperties(ctx context.Context, in *pb.Updat
 	}
 
 	copyServiceRef := *service
-	copyServiceRef.Properties = in.Properties
+	copyServiceRef.Properties = in.Properties // 全量替换
 	copyServiceRef.ModTimestamp = strconv.FormatInt(time.Now().Unix(), 10)
 
 	data, err := json.Marshal(copyServiceRef)
@@ -578,7 +583,7 @@ func (s *MicroServiceService) UpdateProperties(ctx context.Context, in *pb.Updat
 		}, err
 	}
 
-	// Set key file
+	// Set key file  保证key一定存在
 	resp, err := backend.Registry().TxnWithCmp(ctx,
 		[]registry.PluginOp{registry.OpPut(registry.WithStrKey(key), registry.WithValue(data))},
 		[]registry.CompareOp{registry.OpCmp(

@@ -52,7 +52,7 @@ func (w *innerWatcher) process(_ context.Context) {
 	select {
 	case <-stopCh:	//主动取消
 		// timed out or exception
-		w.Stop()
+		w.Stop() // 关闭EventBus 解除上层的for
 		cancel()
 	case <-w.stopCh: // 上层的退出导致这里取消
 		cancel()
@@ -60,7 +60,7 @@ func (w *innerWatcher) process(_ context.Context) {
 
 }
 
-// watch回调函数 数据写入bug
+// watch回调函数 数据写入bus
 func (w *innerWatcher) sendEvent(resp *registry.PluginResponse) {
 	defer log.Recover()
 	w.bus <- resp
@@ -69,6 +69,7 @@ func (w *innerWatcher) sendEvent(resp *registry.PluginResponse) {
 // 关闭
 func (w *innerWatcher) Stop() {
 	w.mux.Lock()
+	// 已经关闭了，会重复stop
 	if w.stop {
 		w.mux.Unlock()
 		return
@@ -86,6 +87,7 @@ func newInnerWatcher(lw ListWatch, cfg ListWatchConfig) *innerWatcher {
 		bus:    make(chan *registry.PluginResponse, eventBusSize),
 		stopCh: make(chan struct{}),
 	}
+	// 开始watch
 	gopool.Go(w.process)
 	return w
 }

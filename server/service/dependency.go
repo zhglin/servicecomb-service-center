@@ -32,6 +32,7 @@ import (
 	serviceUtil "github.com/apache/servicecomb-service-center/server/service/util"
 )
 
+// 添加新的依赖关系 override=false  不唯一
 func (s *MicroServiceService) AddDependenciesForMicroServices(ctx context.Context, in *pb.AddDependenciesRequest) (*pb.AddDependenciesResponse, error) {
 	if err := Validate(in); err != nil {
 		return &pb.AddDependenciesResponse{
@@ -45,6 +46,7 @@ func (s *MicroServiceService) AddDependenciesForMicroServices(ctx context.Contex
 	}, err
 }
 
+// 创建依赖关系 override=true  唯一
 func (s *MicroServiceService) CreateDependenciesForMicroServices(ctx context.Context, in *pb.CreateDependenciesRequest) (*pb.CreateDependenciesResponse, error) {
 	if err := Validate(in); err != nil {
 		return &pb.CreateDependenciesResponse{
@@ -58,6 +60,7 @@ func (s *MicroServiceService) CreateDependenciesForMicroServices(ctx context.Con
 	}, err
 }
 
+// 添加consumer provider关系
 func (s *MicroServiceService) AddOrUpdateDependencies(ctx context.Context, dependencyInfos []*pb.ConsumerDependency, override bool) (*pb.Response, error) {
 	opts := make([]registry.PluginOp, 0, len(dependencyInfos))
 	domainProject := util.ParseDomainProject(ctx)
@@ -66,6 +69,7 @@ func (s *MicroServiceService) AddOrUpdateDependencies(ctx context.Context, depen
 		consumerInfo := proto.DependenciesToKeys([]*pb.MicroServiceKey{dependencyInfo.Consumer}, domainProject)[0]
 		providersInfo := proto.DependenciesToKeys(dependencyInfo.Providers, domainProject)
 
+		// 没校验consumer provider的domainProject必须一致
 		rsp := serviceUtil.ParamsChecker(consumerInfo, providersInfo)
 		if rsp != nil {
 			log.Errorf(nil, "put request into dependency queue failed, override: %t, consumer is %s, %s",
@@ -73,6 +77,7 @@ func (s *MicroServiceService) AddOrUpdateDependencies(ctx context.Context, depen
 			return rsp.Response, nil
 		}
 
+		// 获取consumerId
 		consumerID, err := serviceUtil.GetServiceID(ctx, consumerInfo)
 		if err != nil {
 			log.Errorf(err, "put request into dependency queue failed, override: %t, get consumer[%s] id failed",
@@ -93,6 +98,7 @@ func (s *MicroServiceService) AddOrUpdateDependencies(ctx context.Context, depen
 			return proto.CreateResponse(scerr.ErrInternal, err.Error()), err
 		}
 
+		// 同一个consumer服务，是否分多次添加provider
 		id := apt.DepsQueueUUID
 		if !override {
 			id = util.GenerateUUID()
@@ -112,6 +118,7 @@ func (s *MicroServiceService) AddOrUpdateDependencies(ctx context.Context, depen
 	return proto.CreateResponse(proto.Response_SUCCESS, "Create dependency successfully."), nil
 }
 
+// 获取provider被依赖的consumer信息 []MicroService
 func (s *MicroServiceService) GetProviderDependencies(ctx context.Context, in *pb.GetDependenciesRequest) (*pb.GetProDependenciesResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -123,6 +130,7 @@ func (s *MicroServiceService) GetProviderDependencies(ctx context.Context, in *p
 	domainProject := util.ParseDomainProject(ctx)
 	providerServiceID := in.ServiceId
 
+	// 校验providerId指定的service是否存在
 	provider, err := serviceUtil.GetService(ctx, domainProject, providerServiceID)
 	if err != nil {
 		log.Errorf(err, "GetProviderDependencies failed, provider is %s", providerServiceID)
@@ -150,6 +158,7 @@ func (s *MicroServiceService) GetProviderDependencies(ctx context.Context, in *p
 	}, nil
 }
 
+// 获取consumer依赖的provider的详细信息 []MicroService
 func (s *MicroServiceService) GetConsumerDependencies(ctx context.Context, in *pb.GetDependenciesRequest) (*pb.GetConDependenciesResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -161,6 +170,7 @@ func (s *MicroServiceService) GetConsumerDependencies(ctx context.Context, in *p
 	consumerID := in.ServiceId
 	domainProject := util.ParseDomainProject(ctx)
 
+	// consumer的service信息
 	consumer, err := serviceUtil.GetService(ctx, domainProject, consumerID)
 	if err != nil {
 		log.Errorf(err, "GetConsumerDependencies failed, consumer is %s", consumerID)
@@ -175,6 +185,7 @@ func (s *MicroServiceService) GetConsumerDependencies(ctx context.Context, in *p
 		}, nil
 	}
 
+	// 返回所有provider的[]pb.MicroService
 	dr := serviceUtil.NewConsumerDependencyRelation(ctx, domainProject, consumer)
 	services, err := dr.GetDependencyProviders(toDependencyFilterOptions(in)...)
 	if err != nil {
@@ -191,6 +202,7 @@ func (s *MicroServiceService) GetConsumerDependencies(ctx context.Context, in *p
 	}, nil
 }
 
+//转换成DependencyRelationFilterOpt
 func toDependencyFilterOptions(in *pb.GetDependenciesRequest) (opts []serviceUtil.DependencyRelationFilterOption) {
 	if in.SameDomain {
 		opts = append(opts, serviceUtil.WithSameDomainProject())

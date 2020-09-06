@@ -26,11 +26,14 @@ type Checker interface {
 	Healthy() error
 }
 
+// 节点是否正常
 type DefaultHealthChecker struct {
 }
 
+// 校验节点是否正常
 func (hc *DefaultHealthChecker) Healthy() error {
 	for _, a := range alarm.ListAll() {
+		// etcd或者其他依赖系统存在异常 说明此节点异常
 		if a.ID == alarm.IDBackendConnectionRefuse && a.Status != alarm.Cleared {
 			return errors.New(a.FieldString(alarm.FieldAdditionalContext))
 		}

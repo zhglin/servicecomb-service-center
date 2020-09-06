@@ -111,6 +111,7 @@ var (
 	DependencyRuleParser  = &CommonParser{newDependencyRule, JsonUnmarshal}
 	DependencyQueueParser = &CommonParser{newDependencyQueue, JsonUnmarshal}
 )
+
 // 解析前的校验
 func check(src []byte, dist interface{}) error {
 	if src == nil {

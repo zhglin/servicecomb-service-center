@@ -30,38 +30,45 @@ type Dependency struct {
 	DomainProject string
 	// store the consumer Dependency from dep-queue object
 	Consumer      *rmodel.MicroServiceKey
-	ProvidersRule []*rmodel.MicroServiceKey
+	ProvidersRule []*rmodel.MicroServiceKey  // 最新的providerRule
 	// store the parsed rules from Dependency object
-	DeleteDependencyRuleList []*rmodel.MicroServiceKey
-	CreateDependencyRuleList []*rmodel.MicroServiceKey
+	DeleteDependencyRuleList []*rmodel.MicroServiceKey	// 跟最新的比需要删除的provider
+	CreateDependencyRuleList []*rmodel.MicroServiceKey  // 跟最新的比需要添加的provider
 }
 
+// 删除provider中的consumer
 func (dep *Dependency) removeConsumerOfProviderRule(ctx context.Context) ([]registry.PluginOp, error) {
 	opts := make([]registry.PluginOp, 0, len(dep.DeleteDependencyRuleList))
 	for _, providerRule := range dep.DeleteDependencyRuleList {
 		proProkey := apt.GenerateProviderDependencyRuleKey(providerRule.Tenant, providerRule)
 		log.Debugf("This proProkey is %s", proProkey)
+		// 获取etcd中的providerRule
 		consumerValue, err := TransferToMicroServiceDependency(ctx, proProkey)
 		if err != nil {
 			return nil, err
 		}
 		for key, tmp := range consumerValue.Dependency {
+			// 从provider被依赖的consumer中删掉此consumer
 			if ok := equalServiceDependency(tmp, dep.Consumer); ok {
 				consumerValue.Dependency = append(consumerValue.Dependency[:key], consumerValue.Dependency[key+1:]...)
 				break
 			}
 			log.Debugf("tmp and dep.Consumer not equal, tmp %v, consumer %v", tmp, dep.Consumer)
 		}
+
 		//删除后，如果不存在依赖规则了，就删除该provider的依赖规则，如果有，则更新该依赖规则
 		if len(consumerValue.Dependency) == 0 {
 			opts = append(opts, registry.OpDel(registry.WithStrKey(proProkey)))
 			continue
 		}
+
 		data, err := json.Marshal(consumerValue)
 		if err != nil {
 			log.Errorf(err, "Marshal MicroServiceDependency failed")
 			return nil, err
 		}
+
+		// 添加更新
 		opts = append(opts, registry.OpPut(
 			registry.WithStrKey(proProkey),
 			registry.WithValue(data)))
@@ -69,6 +76,7 @@ func (dep *Dependency) removeConsumerOfProviderRule(ctx context.Context) ([]regi
 	return opts, nil
 }
 
+// 添加provider的consumer
 func (dep *Dependency) addConsumerOfProviderRule(ctx context.Context) ([]registry.PluginOp, error) {
 	opts := make([]registry.PluginOp, 0, len(dep.CreateDependencyRuleList))
 	for _, providerRule := range dep.CreateDependencyRuleList {
@@ -77,6 +85,8 @@ func (dep *Dependency) addConsumerOfProviderRule(ctx context.Context) ([]registr
 		if err != nil {
 			return nil, err
 		}
+
+		// 添加consumer
 		tmpValue.Dependency = append(tmpValue.Dependency, dep.Consumer)
 
 		data, errMarshal := json.Marshal(tmpValue)
@@ -84,9 +94,13 @@ func (dep *Dependency) addConsumerOfProviderRule(ctx context.Context) ([]registr
 			log.Errorf(errMarshal, "Marshal MicroServiceDependency failed")
 			return nil, errMarshal
 		}
+
+		//添加更新
 		opts = append(opts, registry.OpPut(
 			registry.WithStrKey(proProkey),
 			registry.WithValue(data)))
+
+		// 有一个是* 后续的不处理
 		if providerRule.ServiceName == "*" {
 			break
 		}
@@ -94,6 +108,7 @@ func (dep *Dependency) addConsumerOfProviderRule(ctx context.Context) ([]registr
 	return opts, nil
 }
 
+// 修改consumer的provider
 func (dep *Dependency) updateProvidersRuleOfConsumer(_ context.Context) ([]registry.PluginOp, error) {
 	conKey := apt.GenerateConsumerDependencyRuleKey(dep.DomainProject, dep.Consumer)
 	if len(dep.ProvidersRule) == 0 {
@@ -111,16 +126,17 @@ func (dep *Dependency) updateProvidersRuleOfConsumer(_ context.Context) ([]regis
 	return []registry.PluginOp{registry.OpPut(registry.WithStrKey(conKey), registry.WithValue(data))}, nil
 }
 
+// 更新etcd数据
 func (dep *Dependency) Commit(ctx context.Context) error {
-	dopts, err := dep.removeConsumerOfProviderRule(ctx)
+	dopts, err := dep.removeConsumerOfProviderRule(ctx) // 删除provider中的consumer
 	if err != nil {
 		return err
 	}
-	copts, err := dep.addConsumerOfProviderRule(ctx)
+	copts, err := dep.addConsumerOfProviderRule(ctx) // 添加provider中的consumer
 	if err != nil {
 		return err
 	}
-	uopts, err := dep.updateProvidersRuleOfConsumer(ctx)
+	uopts, err := dep.updateProvidersRuleOfConsumer(ctx) // 更新consumer的provider
 	if err != nil {
 		return err
 	}

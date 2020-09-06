@@ -47,6 +47,7 @@ func CreateResponseWithSCErr(err *scerr.Error) *registry.Response {
 	}
 }
 
+// 修改tenant
 func DependenciesToKeys(in []*registry.MicroServiceKey, domainProject string) []*registry.MicroServiceKey {
 	for _, value := range in {
 		if len(value.Tenant) == 0 {
@@ -56,6 +57,7 @@ func DependenciesToKeys(in []*registry.MicroServiceKey, domainProject string) []
 	return in
 }
 
+// 生成etcdKey的serviceKey
 func MicroServiceToKey(domainProject string, in *registry.MicroService) *registry.MicroServiceKey {
 	return &registry.MicroServiceKey{
 		Tenant:      domainProject,

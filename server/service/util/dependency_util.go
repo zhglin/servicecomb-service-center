@@ -193,6 +193,7 @@ func AddServiceVersionRule(ctx context.Context, domainProject string, consumer *
 	return nil
 }
 
+// 获取dependencyRule
 func TransferToMicroServiceDependency(ctx context.Context, key string) (*pb.MicroServiceDependency, error) {
 	microServiceDependency := &pb.MicroServiceDependency{
 		Dependency: []*pb.MicroServiceKey{},
@@ -210,12 +211,14 @@ func TransferToMicroServiceDependency(ctx context.Context, key string) (*pb.Micr
 	return microServiceDependency, nil
 }
 
+// 判断两个service是否相等
 func equalServiceDependency(serviceA *pb.MicroServiceKey, serviceB *pb.MicroServiceKey) bool {
 	stringA := toString(serviceA)
 	stringB := toString(serviceB)
 	return stringA == stringB
 }
 
+// 是否只有版本号不同
 func diffServiceVersion(serviceA *pb.MicroServiceKey, serviceB *pb.MicroServiceKey) bool {
 	stringA := toString(serviceA)
 	stringB := toString(serviceB)
@@ -226,10 +229,12 @@ func diffServiceVersion(serviceA *pb.MicroServiceKey, serviceB *pb.MicroServiceK
 	return false
 }
 
+// 生成provider的key
 func toString(in *pb.MicroServiceKey) string {
 	return apt.GenerateProviderDependencyRuleKey(in.Tenant, in)
 }
 
+// 只有添加，替换，不存在不会进行删除
 func parseAddOrUpdateRules(ctx context.Context, dep *Dependency) (createDependencyRuleList, existDependencyRuleList, deleteDependencyRuleList []*pb.MicroServiceKey) {
 	conKey := apt.GenerateConsumerDependencyRuleKey(dep.DomainProject, dep.Consumer)
 
@@ -240,41 +245,53 @@ func parseAddOrUpdateRules(ctx context.Context, dep *Dependency) (createDependen
 		return
 	}
 
+	// 版本升级被替换掉的
 	deleteDependencyRuleList = make([]*pb.MicroServiceKey, 0, len(oldProviderRules.Dependency))
+	// 新加的
 	createDependencyRuleList = make([]*pb.MicroServiceKey, 0, len(dep.ProvidersRule))
+	// 不变的
 	existDependencyRuleList = make([]*pb.MicroServiceKey, 0, len(oldProviderRules.Dependency))
 	for _, tmpProviderRule := range dep.ProvidersRule {
+		// 已存在
 		if ok, _ := containServiceDependency(oldProviderRules.Dependency, tmpProviderRule); ok {
 			continue
 		}
 
+		// 新加的 如果是*,只添这个service,全部删除现有的
 		if tmpProviderRule.ServiceName == "*" {
 			createDependencyRuleList = append([]*pb.MicroServiceKey{}, tmpProviderRule)
 			deleteDependencyRuleList = oldProviderRules.Dependency
 			break
 		}
 
+		// 添加
 		createDependencyRuleList = append(createDependencyRuleList, tmpProviderRule)
+		// 如果只是版本不一样就替换掉现有的
 		old := isNeedUpdate(oldProviderRules.Dependency, tmpProviderRule)
 		if old != nil {
 			deleteDependencyRuleList = append(deleteDependencyRuleList, old)
 		}
 	}
 	for _, oldProviderRule := range oldProviderRules.Dependency {
+		// 已存在* 不再添加
 		if oldProviderRule.ServiceName == "*" {
 			createDependencyRuleList = nil
 			deleteDependencyRuleList = nil
 			return
 		}
+		// 没被替换
 		if ok, _ := containServiceDependency(deleteDependencyRuleList, oldProviderRule); !ok {
 			existDependencyRuleList = append(existDependencyRuleList, oldProviderRule)
 		}
 	}
 
+	// 修改成最新的
 	dep.ProvidersRule = append(createDependencyRuleList, existDependencyRuleList...)
 	return
 }
 
+// 跟现有的consumer的provider比较 过滤出来添加，删除，不变的provider
+// 不存在会删除
 func parseOverrideRules(ctx context.Context, dep *Dependency) (createDependencyRuleList, existDependencyRuleList, deleteDependencyRuleList []*pb.MicroServiceKey) {
 	conKey := apt.GenerateConsumerDependencyRuleKey(dep.DomainProject, dep.Consumer)
 
@@ -285,16 +302,22 @@ func parseOverrideRules(ctx context.Context, dep *Dependency) (createDependencyR
 		return
 	}
 
+	// 删除的
 	deleteDependencyRuleList = make([]*pb.MicroServiceKey, 0, len(oldProviderRules.Dependency))
+	// 添加的
 	createDependencyRuleList = make([]*pb.MicroServiceKey, 0, len(dep.ProvidersRule))
+	// 已存在的
 	existDependencyRuleList = make([]*pb.MicroServiceKey, 0, len(oldProviderRules.Dependency))
 	for _, oldProviderRule := range oldProviderRules.Dependency {
+		// 被删除
 		if ok, _ := containServiceDependency(dep.ProvidersRule, oldProviderRule); !ok {
 			deleteDependencyRuleList = append(deleteDependencyRuleList, oldProviderRule)
 		} else {
+			// 已存在
 			existDependencyRuleList = append(existDependencyRuleList, oldProviderRule)
 		}
 	}
+	// 添加
 	for _, tmpProviderRule := range dep.ProvidersRule {
 		if ok, _ := containServiceDependency(existDependencyRuleList, tmpProviderRule); !ok {
 			createDependencyRuleList = append(createDependencyRuleList, tmpProviderRule)
@@ -333,6 +356,7 @@ func CreateDependencyRule(ctx context.Context, dep *Dependency) error {
 	return syncDependencyRule(ctx, dep, parseOverrideRules)
 }
 
+// 是否只有版本号不同
 func isNeedUpdate(services []*pb.MicroServiceKey, service *pb.MicroServiceKey) *pb.MicroServiceKey {
 	for _, tmp := range services {
 		if diffServiceVersion(tmp, service) {
@@ -342,6 +366,7 @@ func isNeedUpdate(services []*pb.MicroServiceKey, service *pb.MicroServiceKey) *
 	return nil
 }
 
+// in array
 func containServiceDependency(services []*pb.MicroServiceKey, service *pb.MicroServiceKey) (bool, error) {
 	if services == nil || service == nil {
 		return false, errors.New("invalid params input")
@@ -365,6 +390,7 @@ func BadParamsResponse(detailErr string) *pb.CreateDependenciesResponse {
 	}
 }
 
+// 校验consumer providers
 func ParamsChecker(consumerInfo *pb.MicroServiceKey, providersInfo []*pb.MicroServiceKey) *pb.CreateDependenciesResponse {
 	flag := make(map[string]bool, len(providersInfo))
 	for _, providerInfo := range providersInfo {
@@ -372,15 +398,19 @@ func ParamsChecker(consumerInfo *pb.MicroServiceKey, providersInfo []*pb.MicroSe
 		if providerInfo.ServiceName == "*" {
 			break
 		}
+
+		// 设置provider的appId
 		if len(providerInfo.AppId) == 0 {
 			providerInfo.AppId = consumerInfo.AppId
 		}
 
+		// provider必须要有版本号
 		version := providerInfo.Version
 		if len(version) == 0 {
 			return BadParamsResponse("Required provider version")
 		}
 
+		// 不能是相同的provider不同的版本
 		providerInfo.Version = ""
 		if _, ok := flag[toString(providerInfo)]; ok {
 			return BadParamsResponse("Invalid request body for provider info.Duplicate provider or (serviceName and appId is same).")
@@ -391,6 +421,7 @@ func ParamsChecker(consumerInfo *pb.MicroServiceKey, providersInfo []*pb.MicroSe
 	return nil
 }
 
+// 删除service时删除依赖记录，通过发事件的方式删除consumer的依赖
 func DeleteDependencyForDeleteService(domainProject string, serviceID string, service *pb.MicroServiceKey) (registry.PluginOp, error) {
 	key := apt.GenerateConsumerDependencyQueueKey(domainProject, serviceID, apt.DepsQueueUUID)
 	conDep := new(pb.ConsumerDependency)
@@ -404,7 +435,9 @@ func DeleteDependencyForDeleteService(domainProject string, serviceID string, se
 	return registry.OpPut(registry.WithStrKey(key), registry.WithValue(data)), nil
 }
 
+// 清理consumer依赖的不存在的provider
 func removeProviderRuleOfConsumer(ctx context.Context, domainProject string, cache map[string]bool) ([]registry.PluginOp, error) {
+	// 获取所有指定domainProject下的consumer依赖
 	key := apt.GenerateConsumerDependencyRuleKey(domainProject, nil) + apt.SPLIT
 	resp, err := backend.Store().DependencyRule().Search(ctx,
 		registry.WithStrKey(key), registry.WithPrefix())
@@ -418,6 +451,7 @@ loop:
 		var left []*pb.MicroServiceKey
 		all := kv.Value.(*pb.MicroServiceDependency).Dependency
 		for _, key := range all {
+			// 跳过 *
 			if key.ServiceName == "*" {
 				continue loop
 			}
@@ -425,6 +459,7 @@ loop:
 			id := apt.GenerateProviderDependencyRuleKey(key.Tenant, key)
 			exist, ok := cache[id]
 			if !ok {
+				// 检查每个provider是否存在
 				_, exist, err = FindServiceIds(ctx, key.Version, key)
 				if err != nil {
 					return nil, fmt.Errorf("%v, find service %s/%s/%s/%s",
@@ -438,13 +473,16 @@ loop:
 			}
 		}
 
+		// 是否所有依赖的provider都存在
 		if len(all) == len(left) {
 			continue
 		}
 
+		// 依赖的provider全都不存在 删除依赖关系
 		if len(left) == 0 {
 			ops = append(ops, registry.OpDel(registry.WithKey(kv.Key)))
 		} else {
+			// 去掉不存在的provider
 			val, err := json.Marshal(&pb.MicroServiceDependency{Dependency: left})
 			if err != nil {
 				return nil, fmt.Errorf("%v, marshal %v", err, left)
@@ -455,6 +493,7 @@ loop:
 	return ops, nil
 }
 
+// 清理掉不存在的provider的依赖关系
 func removeProviderRuleKeys(ctx context.Context, domainProject string, cache map[string]bool) ([]registry.PluginOp, error) {
 	key := apt.GenerateProviderDependencyRuleKey(domainProject, nil) + apt.SPLIT
 	resp, err := backend.Store().DependencyRule().Search(ctx,
@@ -473,6 +512,7 @@ func removeProviderRuleKeys(ctx context.Context, domainProject string, cache map
 				continue
 			}
 
+			// provider是否存在
 			_, exist, err = FindServiceIds(ctx, key.Version, key)
 			if err != nil {
 				return nil, fmt.Errorf("find service %s/%s/%s/%s, %v",
@@ -481,6 +521,7 @@ func removeProviderRuleKeys(ctx context.Context, domainProject string, cache map
 			cache[id] = exist
 		}
 
+		// 不存在删除
 		if !exist {
 			ops = append(ops, registry.OpDel(registry.WithKey(kv.Key)))
 		}
@@ -488,17 +529,20 @@ func removeProviderRuleKeys(ctx context.Context, domainProject string, cache map
 	return ops, nil
 }
 
+// 清理不存在的provider
 func CleanUpDependencyRules(ctx context.Context, domainProject string) error {
 	if len(domainProject) == 0 {
 		return errors.New("required domainProject")
 	}
 
 	cache := make(map[string]bool)
+	// 删掉consumer依赖的不存在的provider
 	pOps, err := removeProviderRuleOfConsumer(ctx, domainProject, cache)
 	if err != nil {
 		return err
 	}
 
+	// 删掉不存在的provider的依赖关系
 	kOps, err := removeProviderRuleKeys(ctx, domainProject, cache)
 	if err != nil {
 		return err

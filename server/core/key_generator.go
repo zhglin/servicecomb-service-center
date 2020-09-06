@@ -62,7 +62,7 @@ func GetServiceRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
-//ServiceIndex	/cse-sr/ms/indexes/domin/project/environment/appId/serviceName/version => serviceId
+//ServiceIndex前缀	/cse-sr/ms/indexes/{domainProject}
 func GetServiceIndexRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -248,6 +248,7 @@ func GenerateInstanceLeaseKey(domainProject string, serviceID string, instanceID
 	}, SPLIT)
 }
 
+// service依赖key  provider consumer
 func GenerateServiceDependencyRuleKey(serviceType string, domainProject string, in *registry.MicroServiceKey) string {
 	if in == nil {
 		return util.StringJoin([]string{
@@ -273,14 +274,20 @@ func GenerateServiceDependencyRuleKey(serviceType string, domainProject string, 
 	}, SPLIT)
 }
 
+// consumer /cse-sr/ms/dep-rules/{domainProject}/c/{Environment}/{AppId}/{ServiceName}/{Version}
+// value => []*MicroServiceKey (consumer对应的多个provider)
 func GenerateConsumerDependencyRuleKey(domainProject string, in *registry.MicroServiceKey) string {
 	return GenerateServiceDependencyRuleKey(DepsConsumer, domainProject, in)
 }
 
+// provider /cse-sr/ms/dep-rules/{domainProject}/p/{Environment}/{AppId}/{ServiceName}/{Version}
+// provider /cse-sr/ms/dep-rules/{domainProject}/p/{Environment}/{ServiceName==*}
+// value => []*MicroServiceKey (provider对应的多个consumer)
 func GenerateProviderDependencyRuleKey(domainProject string, in *registry.MicroServiceKey) string {
 	return GenerateServiceDependencyRuleKey(DepsProvider, domainProject, in)
 }
 
+// DependencyRule前缀    /cse-sr/ms/dep-rules/{domainProject}
 func GetServiceDependencyRuleRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -290,6 +297,7 @@ func GetServiceDependencyRuleRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+// /cse-sr/ms/dep-queue/{domainProject}
 func GetServiceDependencyQueueRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),
@@ -299,6 +307,7 @@ func GetServiceDependencyQueueRootKey(domainProject string) string {
 	}, SPLIT)
 }
 
+// ConsumerDependency /cse-sr/ms/dep-queue/{domainProject}/{consumerId(服务id)}/{uuid} => pb.ConsumerDependency
 func GenerateConsumerDependencyQueueKey(domainProject, consumerID, uuid string) string {
 	return util.StringJoin([]string{
 		GetServiceDependencyQueueRootKey(domainProject),

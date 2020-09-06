@@ -26,6 +26,7 @@ func init() {
 	notifyService = notify.NewNotifyService()
 }
 
+// notify服务
 func GetNotifyCenter() *notify.Service {
 	return notifyService
 }

@@ -18,9 +18,10 @@
 package util
 
 //The Tree is binary sort Tree
+// 二叉排序树 只能添加不能删除节点 没有重平衡
 type Tree struct {
 	root        *Node
-	isAddToLeft func(node *Node, addRes interface{}) bool
+	isAddToLeft func(node *Node, addRes interface{}) bool  // 比较函数 左节点
 }
 
 func NewTree(isAddToLeft func(node *Node, addRes interface{}) bool) *Tree {
@@ -43,6 +44,7 @@ func (t *Tree) AddNode(res interface{}) *Node {
 	return t.addNode(t.root, res)
 }
 
+// 添加节点
 func (t *Tree) addNode(n *Node, res interface{}) *Node {
 	if n == nil {
 		n = new(Node)
@@ -61,6 +63,7 @@ func (t *Tree) addNode(n *Node, res interface{}) *Node {
 }
 
 //middle oder traversal, handle is the func that deals with the res, n is the start node to traversal
+// 中序遍历(从小到大)  handle是处理node的函数
 func (t *Tree) InOrderTraversal(n *Node, handle func(res interface{}) error) error {
 	if n == nil {
 		return nil

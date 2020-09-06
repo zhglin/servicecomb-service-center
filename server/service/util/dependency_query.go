@@ -29,19 +29,24 @@ import (
 	"strings"
 )
 
+// 选项
 type DependencyRelationFilterOpt struct {
 	SameDomainProject bool
 	NonSelf           bool
 }
 
+// 选项函数
 type DependencyRelationFilterOption func(opt DependencyRelationFilterOpt) DependencyRelationFilterOpt
 
+// 设置SameDomainProject
 func WithSameDomainProject() DependencyRelationFilterOption {
 	return func(opt DependencyRelationFilterOpt) DependencyRelationFilterOpt {
 		opt.SameDomainProject = true
 		return opt
 	}
 }
+
+// 设置NonSelf
 func WithoutSelfDependency() DependencyRelationFilterOption {
 	return func(opt DependencyRelationFilterOpt) DependencyRelationFilterOpt {
 		opt.NonSelf = true
@@ -49,6 +54,7 @@ func WithoutSelfDependency() DependencyRelationFilterOption {
 	}
 }
 
+// 执行opts 返回op
 func toDependencyRelationFilterOpt(opts ...DependencyRelationFilterOption) (op DependencyRelationFilterOpt) {
 	for _, opt := range opts {
 		op = opt(op)
@@ -63,7 +69,9 @@ type DependencyRelation struct {
 	provider      *pb.MicroService
 }
 
+// 获取consumer对应的provider
 func (dr *DependencyRelation) GetDependencyProviders(opts ...DependencyRelationFilterOption) ([]*pb.MicroService, error) {
+	// 获取provider
 	keys, err := dr.getProviderKeys()
 	if err != nil {
 		return nil, err
@@ -71,20 +79,24 @@ func (dr *DependencyRelation) GetDependencyProviders(opts ...DependencyRelationF
 	services := make([]*pb.MicroService, 0, len(keys))
 	op := toDependencyRelationFilterOpt(opts...)
 	for _, key := range keys {
+		// 必须相同的domainProject
 		if op.SameDomainProject && key.Tenant != dr.domainProject {
 			continue
 		}
 
+		// 获取provider的serviceId
 		providerIDs, err := dr.parseDependencyRule(key)
 		if err != nil {
 			return nil, err
 		}
 
+		// provider里既有*，又有非*，此key==* 就忽略非*的结果
 		if key.ServiceName == "*" {
 			services = services[:0]
 		}
 
 		for _, providerID := range providerIDs {
+			// 校验serviceId是否存在
 			provider, err := GetService(dr.ctx, key.Tenant, providerID)
 			if err != nil {
 				log.Warnf("get provider[%s/%s/%s/%s] failed",
@@ -96,12 +108,15 @@ func (dr *DependencyRelation) GetDependencyProviders(opts ...DependencyRelationF
 					key.Environment, key.AppId, key.ServiceName, key.Version)
 				continue
 			}
+
+			// 不允许自己依赖自己
 			if op.NonSelf && providerID == dr.consumer.ServiceId {
 				continue
 			}
 			services = append(services, provider)
 		}
 
+		// 不再处理剩下的provider
 		if key.ServiceName == "*" {
 			break
 		}
@@ -117,13 +132,19 @@ func (dr *DependencyRelation) GetDependencyProviderIds() ([]string, error) {
 	return dr.getDependencyProviderIds(keys)
 }
 
+// 获取etcd中consumer对应的provider
 func (dr *DependencyRelation) getProviderKeys() ([]*pb.MicroServiceKey, error) {
 	if dr.consumer == nil {
 		return nil, fmt.Errorf("Invalid consumer")
 	}
+
+	// consumer的service信息转换成serviceKey
 	consumerMicroServiceKey := proto.MicroServiceToKey(dr.domainProject, dr.consumer)
 
+	// 生成etcd key
 	conKey := apt.GenerateConsumerDependencyRuleKey(dr.domainProject, consumerMicroServiceKey)
+
+	// 获取etcd value
 	consumerDependency, err := TransferToMicroServiceDependency(dr.ctx, conKey)
 	if err != nil {
 		return nil, err
@@ -159,14 +180,18 @@ func (dr *DependencyRelation) getDependencyProviderIds(providerRules []*pb.Micro
 	return provideServiceIds, nil
 }
 
+// 获取指定service的serviceId
 func (dr *DependencyRelation) parseDependencyRule(dependencyRule *pb.MicroServiceKey) (serviceIDs []string, err error) {
 	opts := FromContext(dr.ctx)
 	switch {
+	// *代表domain/project下的所有service
 	case dependencyRule.ServiceName == "*":
 		log.Infof("service[%s/%s/%s/%s] rely all service",
 			dr.consumer.Environment, dr.consumer.AppId, dr.consumer.ServiceName, dr.consumer.Version)
 		splited := strings.Split(apt.GenerateServiceIndexKey(dependencyRule), "/")
+		// /cse-sr/ms/indexes/{domin/project}/{environment}
 		allServiceKey := util.StringJoin(splited[:len(splited)-3], "/") + "/"
+		// 获取domainProject下所有的serviceId
 		sopts := append(opts,
 			registry.WithStrKey(allServiceKey),
 			registry.WithPrefix())
@@ -184,7 +209,9 @@ func (dr *DependencyRelation) parseDependencyRule(dependencyRule *pb.MicroServic
 	return
 }
 
+// 获取provider对应的consumer
 func (dr *DependencyRelation) GetDependencyConsumers(opts ...DependencyRelationFilterOption) ([]*pb.MicroService, error) {
+	// 获取所有consumer
 	consumerDependAllList, err := dr.getDependencyConsumersOfProvider()
 	if err != nil {
 		log.Errorf(err, "get service[%s]'s consumers failed", dr.provider.ServiceId)
@@ -193,10 +220,12 @@ func (dr *DependencyRelation) GetDependencyConsumers(opts ...DependencyRelationF
 	consumers := make([]*pb.MicroService, 0)
 	op := toDependencyRelationFilterOpt(opts...)
 	for _, consumer := range consumerDependAllList {
+		// 必须domainProject一致
 		if op.SameDomainProject && consumer.Tenant != dr.domainProject {
 			continue
 		}
 
+		// 校验service是否存在
 		service, err := dr.getServiceByMicroServiceKey(consumer)
 		if err != nil {
 			return nil, err
@@ -207,6 +236,7 @@ func (dr *DependencyRelation) GetDependencyConsumers(opts ...DependencyRelationF
 			continue
 		}
 
+		// 不允许provider依赖provider
 		if op.NonSelf && service.ServiceId == dr.provider.ServiceId {
 			continue
 		}
@@ -216,6 +246,7 @@ func (dr *DependencyRelation) GetDependencyConsumers(opts ...DependencyRelationF
 	return consumers, nil
 }
 
+// 获取serviceKey对应的serviceId
 func (dr *DependencyRelation) getServiceByMicroServiceKey(service *pb.MicroServiceKey) (*pb.MicroService, error) {
 	serviceID, err := GetServiceID(dr.ctx, service)
 	if err != nil {
@@ -229,6 +260,7 @@ func (dr *DependencyRelation) getServiceByMicroServiceKey(service *pb.MicroServi
 	return GetService(dr.ctx, service.Tenant, serviceID)
 }
 
+// 获取provider被依赖的consumer的serviceId
 func (dr *DependencyRelation) GetDependencyConsumerIds() ([]string, error) {
 	consumerDependAllList, err := dr.getDependencyConsumersOfProvider()
 	if err != nil {
@@ -253,27 +285,33 @@ func (dr *DependencyRelation) GetDependencyConsumerIds() ([]string, error) {
 
 }
 
+// 根据provider查consumer 有*的存在
 func (dr *DependencyRelation) getDependencyConsumersOfProvider() ([]*pb.MicroServiceKey, error) {
 	if dr.provider == nil {
 		return nil, fmt.Errorf("Invalid provider")
 	}
 	providerService := proto.MicroServiceToKey(dr.domainProject, dr.provider)
+	// 处理* 不管version
 	consumerDependAllList, err := dr.getConsumerOfDependAllServices()
 	if err != nil {
 		log.Errorf(err, "get consumers that depend on all services failed, %s", dr.provider.ServiceId)
 		return nil, err
 	}
 
+	// 处理非* version
 	consumerDependList, err := dr.getConsumerOfSameServiceNameAndAppID(providerService)
 	if err != nil {
 		log.Errorf(err, "get consumers that depend on rule[%s/%s/%s/%s] failed",
 			dr.provider.Environment, dr.provider.AppId, dr.provider.ServiceName, dr.provider.Version)
 		return nil, err
 	}
+
+	// 合并
 	consumerDependAllList = append(consumerDependAllList, consumerDependList...)
 	return consumerDependAllList, nil
 }
 
+// 获取consumer中provider==*的consumer
 func (dr *DependencyRelation) getConsumerOfDependAllServices() ([]*pb.MicroServiceKey, error) {
 	providerService := proto.MicroServiceToKey(dr.domainProject, dr.provider)
 	providerService.ServiceName = "*"
@@ -293,8 +331,10 @@ func (dr *DependencyRelation) getConsumerOfDependAllServices() ([]*pb.MicroServi
 	return nil, nil
 }
 
+// 获取provider的consumer 非* 处理版本
 func (dr *DependencyRelation) getConsumerOfSameServiceNameAndAppID(provider *pb.MicroServiceKey) ([]*pb.MicroServiceKey, error) {
 	providerVersion := provider.Version
+	// 去掉了version查询etcd
 	provider.Version = ""
 	prefix := apt.GenerateProviderDependencyRuleKey(dr.domainProject, provider)
 	provider.Version = providerVersion
@@ -313,8 +353,10 @@ func (dr *DependencyRelation) getConsumerOfSameServiceNameAndAppID(provider *pb.
 	var latestServiceID []string
 
 	for _, kv := range rsp.Kvs {
+		// 判断版本号  consumer的
 		providerVersionRuleArr := strings.Split(util.BytesToStringWithNoCopy(kv.Key), "/")
 		providerVersionRule := providerVersionRuleArr[len(providerVersionRuleArr)-1]
+		// 取provider最后的版本 查一次就可以了
 		if providerVersionRule == "latest" {
 			if latestServiceID == nil {
 				latestServiceID, _, err = FindServiceIds(dr.ctx, providerVersionRule, provider)
@@ -334,6 +376,7 @@ func (dr *DependencyRelation) getConsumerOfSameServiceNameAndAppID(provider *pb.
 			}
 
 		} else {
+			// 不符合版本限制
 			if !VersionMatchRule(providerVersion, providerVersionRule) {
 				continue
 			}
@@ -345,14 +388,17 @@ func (dr *DependencyRelation) getConsumerOfSameServiceNameAndAppID(provider *pb.
 	return allConsumers, nil
 }
 
+// provider的被依赖关系
 func NewProviderDependencyRelation(ctx context.Context, domainProject string, provider *pb.MicroService) *DependencyRelation {
 	return NewDependencyRelation(ctx, domainProject, nil, provider)
 }
 
+// consumer的依赖关系
 func NewConsumerDependencyRelation(ctx context.Context, domainProject string, consumer *pb.MicroService) *DependencyRelation {
 	return NewDependencyRelation(ctx, domainProject, consumer, nil)
 }
 
+// 依赖关系
 func NewDependencyRelation(ctx context.Context, domainProject string, consumer *pb.MicroService, provider *pb.MicroService) *DependencyRelation {
 	return &DependencyRelation{
 		ctx:           ctx,

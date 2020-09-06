@@ -711,6 +711,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 		Instances: instances,
 	}, nil
 }
+
 //批量查询consumer依赖的provider信息
 func (s *InstanceService) BatchFind(ctx context.Context, in *pb.BatchFindInstancesRequest) (*pb.BatchFindInstancesResponse, error) {
 	if len(in.Services) == 0 && len(in.Instances) == 0 {
@@ -920,7 +921,9 @@ func (s *InstanceService) UpdateInstanceProperties(ctx context.Context, in *pb.U
 	}, nil
 }
 
+// 获取此service center对应的集群下的所有instance
 func (s *InstanceService) ClusterHealth(ctx context.Context) (*pb.GetInstancesResponse, error) {
+	// 校验此service center节点是否正常
 	if err := health.GlobalHealthChecker().Healthy(); err != nil {
 		return &pb.GetInstancesResponse{
 			Response: proto.CreateResponse(scerr.ErrUnhealthy, err.Error()),

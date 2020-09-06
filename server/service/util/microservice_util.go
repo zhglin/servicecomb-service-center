@@ -138,6 +138,7 @@ func GetServicesByDomainProject(ctx context.Context, domainProject string) ([]*p
 	return services, nil
 }
 
+// 根据service信息获取service的id
 func GetServiceID(ctx context.Context, key *pb.MicroServiceKey) (serviceID string, err error) {
 	serviceID, err = searchServiceID(ctx, key)
 	if err != nil {

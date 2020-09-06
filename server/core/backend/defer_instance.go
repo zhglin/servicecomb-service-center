@@ -34,7 +34,10 @@ type deferItem struct {
 }
 
 // 自我保护handler
-// 统计deferCheckWindow事件段内的delete事件占比是否大于Percent
+// 收集deferCheckWindow时间的delete事件，如果此时间段的delete数量占比大于Percent，那么就开启自我保护
+// 在开启阶段的delete事件，默认进行自我保护。直到所有被保护的delete事件全部处理完才会关闭自我保护。
+// 未开启阶段会延迟deferCheckWindow时间之后对外同步delete事件。
+// 同一key的delete事件如果收到create，update事件会转换成create,update事件同步出去
 type InstanceEventDeferHandler struct {
 	Percent float64  // 生效的比例
 	// 只读cache
@@ -142,7 +145,7 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 				continue
 			}
 
-			// 已开启 跳过
+			// 已开启 跳过 delete的直接进行保护
 			if iedh.enabled {
 				continue
 			}
@@ -184,7 +187,7 @@ func (iedh *InstanceEventDeferHandler) check(ctx context.Context) {
 				iedh.recover(item.event)
 			}
 
-			// 没有需要保护的event renew
+			// 没有需要保护的event renew 关闭自我保护
 			if len(iedh.items) == 0 {
 				iedh.renew()
 				log.Warnf("self preservation is stopped")

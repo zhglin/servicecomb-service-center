@@ -103,6 +103,7 @@ type GetServicesInfoResponse struct {
 	Statistics        *Statistics      `protobuf:"bytes,3,opt,name=statistics" json:"statistics,omitempty"`
 }
 
+// consumer provider 使用的service
 type MicroServiceKey struct {
 	Tenant      string `protobuf:"bytes,1,opt,name=tenant" json:"tenant,omitempty"`
 	Project     string `protobuf:"bytes,2,opt,name=project" json:"project,omitempty"`
@@ -182,7 +183,7 @@ func (m *GetExistenceResponse) GetSummary() string {
 	return ""
 }
 
-// 注册服务
+// 注册service
 type CreateServiceRequest struct {
 	// service信息
 	Service   *MicroService             `protobuf:"bytes,1,opt,name=service" json:"service,omitempty"`
@@ -199,6 +200,7 @@ type CreateServiceResponse struct {
 	ServiceId string    `protobuf:"bytes,2,opt,name=serviceId" json:"serviceId,omitempty"`
 }
 
+// 注销service
 type DeleteServiceRequest struct {
 	ServiceId string `protobuf:"bytes,1,opt,name=serviceId" json:"serviceId,omitempty"`
 	Force     bool   `protobuf:"varint,2,opt,name=force" json:"force,omitempty"`
@@ -225,6 +227,7 @@ type GetServicesResponse struct {
 	Services []*MicroService `protobuf:"bytes,2,rep,name=services" json:"services,omitempty"`
 }
 
+// 修改service的properties
 type UpdateServicePropsRequest struct {
 	ServiceId  string            `protobuf:"bytes,1,opt,name=serviceId" json:"serviceId,omitempty"`
 	Properties map[string]string `protobuf:"bytes,2,rep,name=properties" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -341,6 +344,7 @@ type WatchInstanceResponse struct {
 	Instance *MicroServiceInstance `protobuf:"bytes,4,opt,name=instance" json:"instance,omitempty"`
 }
 
+// 添加consumer依赖的service
 type AddDependenciesRequest struct {
 	Dependencies []*ConsumerDependency `protobuf:"bytes,1,rep,name=dependencies" json:"dependencies,omitempty"`
 }

@@ -132,6 +132,7 @@ func GetInfoFromSchemaKV(key []byte) (domainProject, serviceID, schemaID string)
 	return domainProject, keys[l-2], keys[l-1]
 }
 
+// 拆解dependencyQueue
 func GetInfoFromDependencyQueueKV(key []byte) (consumerID, domainProject, uuid string) {
 	keys := KvToResponse(key)
 	l := len(keys)

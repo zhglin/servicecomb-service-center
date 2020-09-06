@@ -48,6 +48,7 @@ func (s *MicroServiceService) URLPatterns() []rest.Route {
 	}
 }
 
+// service注册 支持同时注册instance
 func (s *MicroServiceService) Register(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -73,6 +74,7 @@ func (s *MicroServiceService) Register(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 修改service的properties  全量替换properties
 func (s *MicroServiceService) Update(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -98,6 +100,7 @@ func (s *MicroServiceService) Update(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 注销service
 func (s *MicroServiceService) Unregister(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	serviceID := query.Get(":serviceId")

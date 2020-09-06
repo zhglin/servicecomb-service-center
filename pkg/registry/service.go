@@ -17,6 +17,7 @@
 
 package registry
 
+// service center 节点
 type MicroService struct {
 	// 完成注册时更新
 	ServiceId    string             `protobuf:"bytes,1,opt,name=serviceId" json:"serviceId,omitempty"`
@@ -30,6 +31,7 @@ type MicroService struct {
 	Schemas      []string           `protobuf:"bytes,7,rep,name=schemas" json:"schemas,omitempty"`
 	Paths        []*ServicePath     `protobuf:"bytes,10,rep,name=paths" json:"paths,omitempty"`
 	Status       string             `protobuf:"bytes,8,opt,name=status" json:"status,omitempty"`
+	// 属性
 	Properties   map[string]string  `protobuf:"bytes,9,rep,name=properties" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// 注册时间
 	Timestamp    string             `protobuf:"bytes,11,opt,name=timestamp" json:"timestamp,omitempty"`
@@ -37,7 +39,9 @@ type MicroService struct {
 	// 别名
 	Alias        string             `protobuf:"bytes,13,opt,name=alias" json:"alias,omitempty"`
 	LBStrategy   map[string]string  `protobuf:"bytes,14,rep,name=LBStrategy" json:"LBStrategy,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// 变更时间
 	ModTimestamp string             `protobuf:"bytes,15,opt,name=modTimestamp" json:"modTimestamp,omitempty"`
+	// 环境
 	Environment  string             `protobuf:"bytes,16,opt,name=environment" json:"environment,omitempty"`
 	RegisterBy   string             `protobuf:"bytes,17,opt,name=registerBy" json:"registerBy,omitempty"`
 	Framework    *FrameWorkProperty `protobuf:"bytes,18,opt,name=framework" json:"framework,omitempty"`

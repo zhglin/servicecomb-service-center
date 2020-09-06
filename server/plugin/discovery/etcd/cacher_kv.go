@@ -69,7 +69,7 @@ func (c *KvCacher) needList() bool {
 		c.reListCount = 0
 		return true
 	}
-	// 每DefaultForceListInterval次 返回tre
+	// 每DefaultForceListInterval次 返回tre 需要全量拉取
 	c.reListCount++
 	if c.reListCount < DefaultForceListInterval {
 		return false
@@ -78,7 +78,7 @@ func (c *KvCacher) needList() bool {
 	return true
 }
 
-// 从listWatch中获取全量数据
+// 从listWatch中获取全量数据，需要跟本地cache比较生成事件进行同步
 func (c *KvCacher) doList(cfg ListWatchConfig) error {
 	resp, err := c.lw.List(cfg)
 	if err != nil {
@@ -92,7 +92,7 @@ func (c *KvCacher) doList(cfg ListWatchConfig) error {
 		c.Cfg.Key, len(kvs), rev)
 
 	// just reset the cacher if cache marked dirty
-	// 如果cache被设置成脏的 需要重置cache 定时设置
+	// 如果cache被设置成脏的 需要重置cache 定时设置 不会进行事件通知
 	if c.cache.Dirty() {
 		c.reset(rev, kvs)
 		log.Warnf("Cache[%s] is reset!", c.cache.Name())
@@ -100,7 +100,7 @@ func (c *KvCacher) doList(cfg ListWatchConfig) error {
 	}
 
 	// calc and return the diff between cache and ETCD
-	// 过滤生成变更事件
+	// 过滤生成变更事件，跟本地cache比较生成事件
 	evts := c.filter(rev, kvs)
 	// there is no change between List() and cache, then stop the self preservation
 	// etcd的ttl的过期会触发自我保护，重新续约会才取消，这个时候一定会有事件产生
@@ -115,17 +115,17 @@ func (c *KvCacher) doList(cfg ListWatchConfig) error {
 	return nil
 }
 
-// 全量重置cache
+// 全量重置cache，不会进行事件通知，可能会丢事件
 func (c *KvCacher) reset(rev int64, kvs []*mvccpb.KeyValue) {
 	// 重置DeferHandler
 	if c.Cfg.DeferHandler != nil {
 		c.Cfg.DeferHandler.Reset()
 	}
 	// clear cache before Set is safe, because the watch operation is stop,
-	// but here will make all API requests go to ETCD directly.
+	// but here will make all API requests go to ETCD directly. 这里将使所有API请求直接到ETCD。
 	c.cache.Clear()
-	// do not notify when cacher is dirty status,
-	// otherwise, too many events will notify to downstream.
+	// do not notify when cacher is dirty status,		当cacher是脏状态时不通知
+	// otherwise, too many events will notify to downstream. 否则，将有太多事件通知下游。
 	c.buildCache(c.filter(rev, kvs))
 }
 
@@ -153,6 +153,7 @@ func (c *KvCacher) ListAndWatch(ctx context.Context) error {
 	// 1. Initial: cache is building, the lister's revision is 0.
 	// 2. Runtime: error occurs in previous watch operation, the lister's revision is set to 0.
 	// 3. Runtime: watch operation timed out over DEFAULT_FORCE_LIST_INTERVAL times.
+	// watch DefaultForceListInterval次或者watch异常会全量拉取，watch异常全量拉取的时候需要跟cache比较创建事件
 	if c.needList() {
 		// 全量获取 cache的定期全量生成 只在doList阶段处理
 		if err := c.doList(cfg); err != nil && (!c.IsReady() || c.lw.Revision() == 0) {
@@ -173,8 +174,9 @@ func (c *KvCacher) ListAndWatch(ctx context.Context) error {
 // 处理watch返回的数据 转换kvEvent并进行sync
 func (c *KvCacher) handleWatcher(watcher Watcher) error {
 	defer watcher.Stop() //watch的异常 退出for
+	// 阻塞在这里直到EventBus关闭
 	for resp := range watcher.EventBus() {
-		// watch异常
+		// watch异常 直接退出
 		if resp == nil {
 			return errors.New("handle watcher error")
 		}
@@ -442,7 +444,7 @@ func (c *KvCacher) handleDeferEvents(ctx context.Context) {
 
 // 应用事件 cache notify
 func (c *KvCacher) onEvents(evts []discovery.KvEvent) {
-	c.buildCache(evts)
+	c.buildCache(evts) // 事件类型已被重置
 	c.notify(evts)
 }
 
@@ -459,7 +461,7 @@ func (c *KvCacher) buildCache(evts []discovery.KvEvent) {
 		switch evt.Type {
 		case rmodel.EVT_CREATE, rmodel.EVT_UPDATE:
 			switch {
-			case init: // cache存在,并且不是update事件,重置为update
+			case init: // 初始化阶段重置成init事件
 				evt.Type = rmodel.EVT_INIT
 			case !ok && evt.Type != rmodel.EVT_CREATE: // cache不存在,并且不是create事件,重置为create
 				log.Warnf("unexpected %s event! it should be %s key %s",
@@ -473,7 +475,7 @@ func (c *KvCacher) buildCache(evts []discovery.KvEvent) {
 
 			// 修改cache
 			c.cache.Put(key, evt.KV)
-			evts[i] = evt
+			evts[i] = evt // 重置类型
 		case rmodel.EVT_DELETE: //删除事件 不存在报警
 			if !ok {
 				log.Warnf("unexpected %s event! key %s does not cache",
@@ -482,9 +484,11 @@ func (c *KvCacher) buildCache(evts []discovery.KvEvent) {
 				evt.KV = prevKv //kv修改为当前cache的值 为了上报
 				c.cache.Remove(key)
 			}
-			evts[i] = evt
+			evts[i] = evt // 重置类型
 		}
 	}
+
+	// 监控
 	discovery.ReportProcessEventCompleted(c.Cfg.Key, evts)
 }
 

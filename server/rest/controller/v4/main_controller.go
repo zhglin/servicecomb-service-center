@@ -54,6 +54,7 @@ func (s *MainService) URLPatterns() []rest.Route {
 	}
 }
 
+// 获取此service center对应的集群下的所有instance
 func (s *MainService) ClusterHealth(w http.ResponseWriter, r *http.Request) {
 	resp, _ := core.InstanceAPI.ClusterHealth(r.Context())
 	respInternal := resp.Response
@@ -61,6 +62,7 @@ func (s *MainService) ClusterHealth(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 获取此service center对应的集群的版本号
 func (s *MainService) GetVersion(w http.ResponseWriter, r *http.Request) {
 	parseVersionOnce.Do(func() {
 		result := Result{

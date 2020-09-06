@@ -34,6 +34,12 @@ type DependencyService struct {
 	//
 }
 
+/*
+	添加查询consumer的provider的依赖关系
+	添加时指定的是MicroServiceKey
+	获取的是MicroService
+    添加之后会通过事件的方式被dependency_event_handler处理
+ */
 func (s *DependencyService) URLPatterns() []rest.Route {
 	return []rest.Route{
 		{Method: rest.HTTPMethodPost, Path: "/v4/:project/registry/dependencies", Func: s.AddDependenciesForMicroServices},
@@ -43,6 +49,7 @@ func (s *DependencyService) URLPatterns() []rest.Route {
 	}
 }
 
+// 添加consumer依赖的provider信息，同一个consumer多次添加provider
 func (s *DependencyService) AddDependenciesForMicroServices(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -65,6 +72,7 @@ func (s *DependencyService) AddDependenciesForMicroServices(w http.ResponseWrite
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 创建依赖关系,一个consumer一次添加所有provider
 func (s *DependencyService) CreateDependenciesForMicroServices(w http.ResponseWriter, r *http.Request) {
 	requestBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -87,12 +95,13 @@ func (s *DependencyService) CreateDependenciesForMicroServices(w http.ResponseWr
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 获取consumer的依赖provider, 不是instance
 func (s *DependencyService) GetConProDependencies(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	request := &pb.GetDependenciesRequest{
 		ServiceId:  query.Get(":consumerId"),
-		SameDomain: query.Get("sameDomain") == "1",
-		NoSelf:     query.Get("noSelf") == "1",
+		SameDomain: query.Get("sameDomain") == "1", // 是否允许跨domain/project
+		NoSelf:     query.Get("noSelf") == "1", // 是否允许consumer依赖自己
 	}
 	resp, _ := core.ServiceAPI.GetConsumerDependencies(r.Context(), request)
 	respInternal := resp.Response
@@ -100,6 +109,7 @@ func (s *DependencyService) GetConProDependencies(w http.ResponseWriter, r *http
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 获取provider的被依赖consumer
 func (s *DependencyService) GetProConDependencies(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	request := &pb.GetDependenciesRequest{
