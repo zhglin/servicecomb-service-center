@@ -50,13 +50,13 @@ type Subscriber interface {
 // 订阅者
 type baseSubscriber struct {
 	// notify类型
-	nType   Type
+	nType Type
 	// 订阅者id
-	id      string
+	id string
 	// 订阅主题
 	subject string
 	// 主题组
-	group   string
+	group string
 	// notifyService
 	service *Service
 	err     error

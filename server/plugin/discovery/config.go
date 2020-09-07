@@ -21,22 +21,23 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	"time"
 )
+
 //addOn配置
 type Config struct {
 	// Key is the prefix to unique specify resource type
 	// key前缀
-	Key          string
+	Key string
 	// 初始化cache大小
-	InitSize     int
+	InitSize int
 	// 全量从etcd拉取数据时 etcd链接超时时间
-	Timeout      time.Duration
-	Period       time.Duration
+	Timeout time.Duration
+	Period  time.Duration
 	// 事件处理函数 不同的discovery.Type绑定不同的处理函数 InstanceEventDeferHandler
 	DeferHandler DeferHandler
 	// 事件处理链
-	OnEvent      KvEventFunc
+	OnEvent KvEventFunc
 	// 从etcd获取的数据进行解析的函数
-	Parser       proto.Parser
+	Parser proto.Parser
 }
 
 func (cfg *Config) String() string {

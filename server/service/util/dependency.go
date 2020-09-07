@@ -30,10 +30,10 @@ type Dependency struct {
 	DomainProject string
 	// store the consumer Dependency from dep-queue object
 	Consumer      *rmodel.MicroServiceKey
-	ProvidersRule []*rmodel.MicroServiceKey  // 最新的providerRule
+	ProvidersRule []*rmodel.MicroServiceKey // 最新的providerRule
 	// store the parsed rules from Dependency object
-	DeleteDependencyRuleList []*rmodel.MicroServiceKey	// 跟最新的比需要删除的provider
-	CreateDependencyRuleList []*rmodel.MicroServiceKey  // 跟最新的比需要添加的provider
+	DeleteDependencyRuleList []*rmodel.MicroServiceKey // 跟最新的比需要删除的provider
+	CreateDependencyRuleList []*rmodel.MicroServiceKey // 跟最新的比需要添加的provider
 }
 
 // 删除provider中的consumer

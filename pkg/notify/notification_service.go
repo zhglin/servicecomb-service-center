@@ -36,7 +36,7 @@ taskQueue里面有chan，保存事件
 有多个worker对应事件处理回调
 
 processor.run启动process，从队列中取事件，最终调用订阅者的onMessage
- */
+*/
 
 // notify 管理所有的数据 给各个订阅者操作的权限
 type Service struct {
@@ -106,7 +106,7 @@ func (s *Service) AddSubscriber(n Subscriber) error {
 
 	p := s.newProcessor(n.Type())
 	n.SetService(s) //把service设置到subscriber中，让订阅者具有管理功能
-	n.OnAccept() // 初次添加订阅者调用订阅者的OnAccept函数，做下必要的初始化工作
+	n.OnAccept()    // 初次添加订阅者调用订阅者的OnAccept函数，做下必要的初始化工作
 
 	// process 添加subscriber
 	p.AddSubscriber(n)

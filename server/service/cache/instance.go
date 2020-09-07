@@ -33,10 +33,10 @@ var FindInstances = &FindInstancesCache{
 
 func init() {
 	FindInstances.AddFilter(
-		&ServiceFilter{},
-		&VersionRuleFilter{},
-		&TagsFilter{},
-		&AccessibleFilter{},
+		&ServiceFilter{},     // 指定的provider信息  /Tenant/Environment/AppId/ServiceName
+		&VersionRuleFilter{}, // provider对应versionRule的serviceIds
+		&TagsFilter{},        // 符合tags的serviceIds
+		&AccessibleFilter{},  // 符合权限的serviceIds
 		&InstancesFilter{},
 		&ConsistencyFilter{},
 	)

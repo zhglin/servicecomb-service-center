@@ -35,7 +35,7 @@ var store = &KvStore{}
 
 func init() {
 	store.Initialize()
-	registerInnerTypes()  //注册各个discovery.Type
+	registerInnerTypes() //注册各个discovery.Type
 }
 
 // discovery etcd中的数据管理器

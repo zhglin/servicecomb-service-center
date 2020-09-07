@@ -39,19 +39,19 @@ type deferItem struct {
 // 未开启阶段会延迟deferCheckWindow时间之后对外同步delete事件。
 // 同一key的delete事件如果收到create，update事件会转换成create,update事件同步出去
 type InstanceEventDeferHandler struct {
-	Percent float64  // 生效的比例
+	Percent float64 // 生效的比例
 	// 只读cache
-	cache     discovery.CacheReader
-	once      sync.Once
-	enabled   bool
+	cache   discovery.CacheReader
+	once    sync.Once
+	enabled bool
 	// 被保护的event(过期删除的instance)
-	items     map[string]*deferItem
+	items map[string]*deferItem
 	// 追加事件的chan eventBlockSize的换成
 	pendingCh chan []discovery.KvEvent
 	// 处理后的可返回的事件
-	deferCh   chan discovery.KvEvent
+	deferCh chan discovery.KvEvent
 	// 重置事件
-	resetCh   chan struct{}
+	resetCh chan struct{}
 }
 
 // 接受数据

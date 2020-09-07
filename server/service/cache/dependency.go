@@ -25,11 +25,12 @@ import (
 	"math"
 )
 
-//consumer,provider的依赖关系（版本号）
+// consumer,provider的依赖关系（版本号）
 var DependencyRule = &DependencyRuleCache{
 	Tree: cache.NewTree(cache.Configure().
 		WithMaxSize(math.MaxInt64))}
-//初始化层级关系  一个provider可以被多个consumer依赖 所以provider在前
+
+// 初始化层级关系  一个provider可以被多个consumer依赖 所以provider在前
 func init() {
 	DependencyRule.AddFilter(
 		&ServiceFilter{},
@@ -60,6 +61,7 @@ func (f *DependencyRuleCache) ExistVersionRule(ctx context.Context, consumerID s
 	}
 	return true
 }
+
 //删除cache
 func (f *DependencyRuleCache) Remove(provider *pb.MicroServiceKey) {
 	f.Tree.Remove(context.WithValue(context.Background(), CtxFindProvider, provider))

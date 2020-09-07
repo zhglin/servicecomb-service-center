@@ -45,8 +45,8 @@ const (
 	RegistryServiceName  = "SERVICECENTER"
 	RegistryServiceAlias = "SERVICECENTER"
 
-	RegistryDefaultLeaseRenewalinterval int32 = 30  // 默认续约时间
-	RegistryDefaultLeaseRetrytimes      int32 = 3	// etcd租约时间 30 * 3
+	RegistryDefaultLeaseRenewalinterval int32 = 30 // 默认续约时间
+	RegistryDefaultLeaseRetrytimes      int32 = 3  // etcd租约时间 30 * 3
 
 	CtxScSelf     = "_sc_self"
 	CtxScRegistry = "_registryOnly"
@@ -100,7 +100,8 @@ func AddDefaultContextValue(ctx context.Context) context.Context {
 func IsDefaultDomainProject(domainProject string) bool {
 	return domainProject == RegistryDomainProject
 }
-//读取配置
+
+//读取配置 设置共享的service
 func SetSharedMode() {
 	sharedServiceNames = make(map[string]struct{})
 	for _, s := range strings.Split(os.Getenv("CSE_SHARED_SERVICES"), ",") {
@@ -112,16 +113,18 @@ func SetSharedMode() {
 	sharedServiceNames[Service.ServiceName] = struct{}{}
 }
 
-//服务是否是不分Environment
+// 服务是否是不分Environment，environment共享，限制挺多
 func IsShared(key *registry.MicroServiceKey) bool {
 	//domain,project 必须都为 default
 	if !IsDefaultDomainProject(key.Tenant) {
 		return false
 	}
-		//AppId必须==default
-		if key.AppId != RegistryAppID {
+
+	//AppId必须==default
+	if key.AppId != RegistryAppID {
 		return false
 	}
+
 	_, ok := sharedServiceNames[key.ServiceName]
 	if !ok {
 		_, ok = sharedServiceNames[key.Alias]

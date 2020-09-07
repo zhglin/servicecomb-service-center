@@ -28,9 +28,9 @@ var errNilNode = errors.New("nil node")
 
 //层次级cache
 type Tree struct {
-	Config  *Config  		//cache配置
-	roots   *ccache.Cache   //cache根节点
-	filters []Filter		//层级关系
+	Config  *Config       //cache配置
+	roots   *ccache.Cache //cache根节点  roots中存储的是node
+	filters []Filter      //层级关系
 	lock    sync.RWMutex
 }
 
@@ -153,7 +153,7 @@ func (t *Tree) nodeFullName(name string, parent *Node) string {
 
 //创建node
 func (t *Tree) createNode(ctx context.Context, idx int, name string, parent *Node) (node *Node, err error) {
-	node, err = t.filters[idx].Init(ctx, parent)
+	node, err = t.filters[idx].Init(ctx, parent) // 创建节点
 	if node == nil {
 		return
 	}

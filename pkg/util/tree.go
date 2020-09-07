@@ -21,7 +21,7 @@ package util
 // 二叉排序树 只能添加不能删除节点 没有重平衡
 type Tree struct {
 	root        *Node
-	isAddToLeft func(node *Node, addRes interface{}) bool  // 比较函数 左节点
+	isAddToLeft func(node *Node, addRes interface{}) bool // 比较函数 左节点
 }
 
 func NewTree(isAddToLeft func(node *Node, addRes interface{}) bool) *Tree {

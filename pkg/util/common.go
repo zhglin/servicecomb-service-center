@@ -19,9 +19,9 @@ package util
 
 const (
 	HeaderRev           = "X-Resource-Revision"
-	CtxGlobal           = "global"		//api 参数
-	CtxNocache          = "noCache"		//api 参数
-	CtxCacheOnly        = "cacheOnly"	//api 参数
-	CtxRequestRevision  = "requestRev"	//api 参数
+	CtxGlobal           = "global"     //api 参数
+	CtxNocache          = "noCache"    //api 参数
+	CtxCacheOnly        = "cacheOnly"  //api 参数
+	CtxRequestRevision  = "requestRev" //api 参数
 	CtxResponseRevision = "responseRev"
 )

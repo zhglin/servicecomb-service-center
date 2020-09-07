@@ -28,6 +28,7 @@ func FromContext(ctx context.Context) []registry.PluginOpOption {
 	// discovery不使用cache
 	case ctx.Value(util.CtxNocache) == "1":
 		opts = append(opts, registry.WithNoCache())
+	// discovery只使用cache
 	case ctx.Value(util.CtxCacheOnly) == "1":
 		opts = append(opts, registry.WithCacheOnly())
 	}

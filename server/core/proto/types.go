@@ -23,12 +23,12 @@ import (
 
 type ServerConfig struct {
 	MaxHeaderBytes int64 `json:"maxHeaderBytes"` // rest 请求的头域最大长度
-	MaxBodyBytes   int64 `json:"maxBodyBytes"` // rest 读取的最大body 限制接收到的请求的Body的大小
+	MaxBodyBytes   int64 `json:"maxBodyBytes"`   // rest 读取的最大body 限制接收到的请求的Body的大小
 
 	ReadHeaderTimeout string `json:"readHeaderTimeout"` // rest server配置 允许读取请求头的时间
-	ReadTimeout       string `json:"readTimeout"` // rest server配置 读取整个文件的最大持续时间,包括正文。
-	IdleTimeout       string `json:"idleTimeout"` // rest server配置 等待的最大时间 keep-live
-	WriteTimeout      string `json:"writeTimeout"` // rest server配置 写入response的超时时间
+	ReadTimeout       string `json:"readTimeout"`       // rest server配置 读取整个文件的最大持续时间,包括正文。
+	IdleTimeout       string `json:"idleTimeout"`       // rest server配置 等待的最大时间 keep-live
+	WriteTimeout      string `json:"writeTimeout"`      // rest server配置 写入response的超时时间
 
 	LimitTTLUnit     string `json:"limitTTLUnit"`
 	LimitConnections int64  `json:"limitConnections"`
@@ -39,35 +39,35 @@ type ServerConfig struct {
 	SslVerifyPeer bool   `json:"sslVerifyPeer,string"`
 	SslCiphers    string `json:"sslCiphers"`
 
-	AutoSyncInterval  string `json:"-"`
+	AutoSyncInterval string `json:"-"`
 	// etcd压缩 保留最近多少个版本 最新版本-CompactIndexDelta
-	CompactIndexDelta int64  `json:"-"`
+	CompactIndexDelta int64 `json:"-"`
 	// etcd压缩的间隔时间
-	CompactInterval   string `json:"-"`
+	CompactInterval string `json:"-"`
 	// 是否开启性能监控
 	EnablePProf bool `json:"enablePProf"`
 	// discovery 是否开启缓存
 	EnableCache bool `json:"enableCache"`
 
-	LogRotateSize   int64  `json:"-"`
-	LogBackupCount  int64  `json:"-"`
-	LogFilePath     string `json:"-"`
-	LogLevel        string `json:"-"`
-	LogFormat       string `json:"-"`
-	LogSys          bool   `json:"-"`
+	LogRotateSize  int64  `json:"-"`
+	LogBackupCount int64  `json:"-"`
+	LogFilePath    string `json:"-"`
+	LogLevel       string `json:"-"`
+	LogFormat      string `json:"-"`
+	LogSys         bool   `json:"-"`
 	// 是否记录请求成功日志
 	EnableAccessLog bool   `json:"-"`
 	AccessLogFile   string `json:"-"`
 
-	PluginsDir string          `json:"-"`
+	PluginsDir string `json:"-"`
 	// 这里会记录各个plugins的信息
-	Plugins    util.JSONObject `json:"plugins"`
+	Plugins util.JSONObject `json:"plugins"`
 	// 是否自注册
 	SelfRegister bool `json:"selfRegister"`
 
 	//clear no-instance services
 	// 是否清理没有instance的service
-	ServiceClearEnabled  bool          `json:"serviceClearEnabled"`
+	ServiceClearEnabled bool `json:"serviceClearEnabled"`
 	// 清理service的间隔时间(定时)
 	ServiceClearInterval time.Duration `json:"serviceClearInterval"`
 	//if a service's existence time reaches this value, it can be cleared

@@ -29,7 +29,6 @@ type Name int
 // ImplName is an alias，it represents a plugin interface implementation.
 type ImplName string
 
-
 // Instance is an instance of a plugin interface which is represented by
 // Name.
 //plugin 接口
@@ -63,7 +62,7 @@ type Plugin struct {
 	// plugin的标识号
 	PName Name
 	// 同一个plugin的不同实现的标识名称
-	Name  ImplName
+	Name ImplName
 	// New news an instance of 'PName' represented plugin interface
 	// 创建plugin的实例的函数
 	New func() Instance

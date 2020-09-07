@@ -78,6 +78,7 @@ var (
 		return json.Unmarshal(src, *d)
 	}
 )
+
 // etcd数据解析接口
 type Parser interface {
 	Unmarshal(src []byte) (interface{}, error)
@@ -85,7 +86,7 @@ type Parser interface {
 
 type CommonParser struct {
 	// 创建空的 struct
-	NewFunc  CreateValueFunc
+	NewFunc CreateValueFunc
 	// json解析到 空struct中
 	FromFunc ParseValueFunc
 }

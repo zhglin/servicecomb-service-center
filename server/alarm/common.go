@@ -29,8 +29,8 @@ const (
 
 const (
 	// 异常类型
-	IDBackendConnectionRefuse model.ID = "BackendConnectionRefuse"  // 标记依赖系统的异常 比如etcd
-	IDInternalError           model.ID = "InternalError" // api接口异常 比如添加数据接口
+	IDBackendConnectionRefuse model.ID = "BackendConnectionRefuse" // 标记依赖系统的异常 比如etcd
+	IDInternalError           model.ID = "InternalError"           // api接口异常 比如添加数据接口
 )
 
 const (

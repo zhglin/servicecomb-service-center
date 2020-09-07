@@ -39,7 +39,7 @@ func NewTCPListener(l net.Listener, srv *Server) (el *TCPListener) {
 		server:   srv,
 	}
 	go func() {
-		<-el.stopCh  // 阻塞chain，Close的调用会解除阻塞并调用Listen.close
+		<-el.stopCh // 阻塞chain，Close的调用会解除阻塞并调用Listen.close
 		el.stopCh <- el.Listener.Close()
 	}()
 	return

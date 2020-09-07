@@ -24,11 +24,11 @@ import (
 
 const (
 	// force re-list
-	DefaultForceListInterval = 4  // 强制拉取全量数据的次数 watch次数
+	DefaultForceListInterval = 4 // 强制拉取全量数据的次数 watch次数
 	DefaultMetricsInterval   = 30 * time.Second
 
 	minWaitInterval = 1 * time.Second // 定时刷新cache时间间隔
-	eventBlockSize  = 1000 // 一次处理的最大事件数量
+	eventBlockSize  = 1000            // 一次处理的最大事件数量
 	eventBusSize    = 1000
 )
 

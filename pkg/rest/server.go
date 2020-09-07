@@ -34,26 +34,26 @@ import (
 )
 
 const (
-	serverStateInit = iota   //server 初始化
-	serverStateRunning       //server 已启动
-	serverStateTerminating   //server 关闭中
-	serverStateClosed        //server 已关闭
+	serverStateInit        = iota //server 初始化
+	serverStateRunning            //server 已启动
+	serverStateTerminating        //server 关闭中
+	serverStateClosed             //server 已关闭
 )
 
 // rest server配置
 type ServerConfig struct {
 	Addr              string
 	Handler           http.Handler
-	ReadTimeout       time.Duration  //读取相应超时时间，包括body
-	ReadHeaderTimeout time.Duration  //读取相应头的超时时间
-	IdleTimeout       time.Duration  //等待的最大时间 keep-live
-	WriteTimeout      time.Duration  //写入response的超时时间
-	KeepAliveTimeout  time.Duration  //tcp链接的keepAlive时长
-	GraceTimeout      time.Duration  //server关闭的延迟时间 非配置项
-	MaxHeaderBytes    int            //请求的头最大长度
-	TLSConfig         *tls.Config    //ssl配置
-	Compressed        bool  // 是否开启压缩  非配置项 默认开启
-	CompressMinBytes  int   // 使用压缩的临界值 非配置项 默认1.4k
+	ReadTimeout       time.Duration //读取相应超时时间，包括body
+	ReadHeaderTimeout time.Duration //读取相应头的超时时间
+	IdleTimeout       time.Duration //等待的最大时间 keep-live
+	WriteTimeout      time.Duration //写入response的超时时间
+	KeepAliveTimeout  time.Duration //tcp链接的keepAlive时长
+	GraceTimeout      time.Duration //server关闭的延迟时间 非配置项
+	MaxHeaderBytes    int           //请求的头最大长度
+	TLSConfig         *tls.Config   //ssl配置
+	Compressed        bool          // 是否开启压缩  非配置项 默认开启
+	CompressMinBytes  int           // 使用压缩的临界值 非配置项 默认1.4k
 }
 
 // 默认的rest server配置
@@ -101,17 +101,17 @@ func NewServer(srvCfg *ServerConfig) *Server {
 type Server struct {
 	*http.Server
 
-	Network          string    // 网络类型 tcp
+	Network          string        // 网络类型 tcp
 	KeepaliveTimeout time.Duration // conn的keepalive时间
 	GraceTimeout     time.Duration //延迟关闭时间
 
-	Listener    net.Listener  // http.Server使用的listener
+	Listener    net.Listener // http.Server使用的listener
 	netListener net.Listener
 	tcpListener *TCPListener
 
-	conns int64  // 链接数
+	conns int64 // 链接数
 	wg    sync.WaitGroup
-	state uint8  // server端链接状态 关闭 开启
+	state uint8 // server端链接状态 关闭 开启
 }
 
 // serve listen  tcp的listener

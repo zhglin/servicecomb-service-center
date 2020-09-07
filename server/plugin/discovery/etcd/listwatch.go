@@ -24,13 +24,14 @@ import (
 )
 
 type ListWatchConfig struct {
-	Timeout time.Duration	//watch时间
+	Timeout time.Duration //watch时间
 	Context context.Context
 }
 
 func (lo *ListWatchConfig) String() string {
 	return fmt.Sprintf("{timeout: %s}", lo.Timeout)
 }
+
 // discovery中与register交互的接口
 type ListWatch interface {
 	List(op ListWatchConfig) (*registry.PluginResponse, error)

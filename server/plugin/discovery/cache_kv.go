@@ -27,9 +27,9 @@ import (
 // e.g. service, instance, lease.
 // cache存储器 提供cache的读写
 type KvCache struct {
-	Cfg   *Config
+	Cfg *Config
 	// discovery.Type 对应的名字
-	name  string
+	name string
 	// 存储器 两层 为了模拟etcd的目录层次结构 实际使用中是用不到的，存储到etcd中的key都是固定的
 	// 一级map是prefix  二级全路径
 	store map[string]map[string]*KeyValue
@@ -115,10 +115,10 @@ loopParent:
 	for _, p := range c.store {
 		for k, v := range p {
 			if v == nil {
-				continue loopParent  // 跳转到loopParent重新执行 p剩下的数据不在处理
+				continue loopParent // 跳转到loopParent重新执行 p剩下的数据不在处理
 			}
 			if !iter(k, v) {
-				break loopParent	// 跳转到loopParent 不在执行下面的for循环
+				break loopParent // 跳转到loopParent 不在执行下面的for循环
 			}
 		}
 	}

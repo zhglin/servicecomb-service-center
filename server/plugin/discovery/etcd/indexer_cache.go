@@ -30,7 +30,7 @@ import (
 // CacheIndexer searches data from etcd cache(firstly) and
 // etcd server(secondly).
 type CacheIndexer struct {
-	*Indexer //etcd查询接口
+	*Indexer                //etcd查询接口
 	*discovery.CacheIndexer //cache查询接口
 }
 

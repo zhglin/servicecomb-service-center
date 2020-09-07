@@ -290,7 +290,7 @@ func (s *InstanceService) Unregister(ctx context.Context, in *pb.UnregisterInsta
 	}, nil
 }
 
-// 删除instance 删除租约
+// 删除instance, 删除租约
 func revokeInstance(ctx context.Context, domainProject string, serviceID string, instanceID string) *scerr.Error {
 	// 获取leaseID
 	leaseID, err := serviceUtil.GetLeaseID(ctx, domainProject, serviceID, instanceID)
@@ -590,6 +590,7 @@ func (s *InstanceService) GetInstances(ctx context.Context, in *pb.GetInstancesR
 		Instances: instances,
 	}, nil
 }
+
 //查找并创建consumer与一个provider的依赖关系
 func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest) (*pb.FindInstancesResponse, error) {
 	err := Validate(in)
@@ -636,7 +637,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 	}
 	if apt.IsShared(provider) {
 		// it means the shared micro-services must be the same env with SC.
-		//如果是共享的service Environment必须与此注册中心节点的Environment相同
+		// 如果是共享的service Environment必须与此注册中心节点的Environment相同
 		provider.Environment = apt.Service.Environment
 
 		findFlag = func() string {
@@ -647,7 +648,9 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 	} else {
 		// provider is not a shared micro-service,
 		// only allow shared micro-service instances found in different domains.
+		// 只允许共享的service可以使用不同的domainProject
 		ctx = util.SetTargetDomainProject(ctx, util.ParseDomain(ctx), util.ParseProject(ctx))
+		// 强制把provider的tenant设置成consumer的tenant
 		provider.Tenant = util.ParseTargetDomainProject(ctx)
 
 		findFlag = func() string {

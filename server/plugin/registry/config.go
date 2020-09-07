@@ -38,8 +38,8 @@ type Config struct {
 	Clusters         types.Clusters `json:"-"`                        // parsed from ClusterAddresses
 	DialTimeout      time.Duration  `json:"connectTimeout"`
 	// etcd请求超时时间
-	RequestTimeOut   time.Duration  `json:"registryTimeout"`
-	AutoSyncInterval time.Duration  `json:"autoSyncInterval"`
+	RequestTimeOut   time.Duration `json:"registryTimeout"`
+	AutoSyncInterval time.Duration `json:"autoSyncInterval"`
 }
 
 //InitClusterInfo re-org address info with node name

@@ -28,8 +28,8 @@ import (
 type InvocationOption func(op InvocationOp) InvocationOp
 
 type InvocationOp struct {
-	Func  CallbackFunc  // 回调函数
-	Async bool          // 是否异步执行
+	Func  CallbackFunc // 回调函数
+	Async bool         // 是否异步执行
 }
 
 // 同步调用

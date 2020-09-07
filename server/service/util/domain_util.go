@@ -108,7 +108,7 @@ func NewProject(ctx context.Context, domain, project string) (bool, error) {
 
 // etcd 创建domain   project
 func NewDomainProject(ctx context.Context, domain, project string) error {
-	// 直接冲etce查询domain是否存在
+	// 只从cache查询domain是否存在
 	copyCtx := util.SetContext(util.CloneContext(ctx), util.CtxCacheOnly, "1")
 	ok, err := DomainExist(copyCtx, domain)
 	if !ok && err == nil {

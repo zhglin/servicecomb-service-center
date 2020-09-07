@@ -26,24 +26,26 @@ import (
 	"github.com/apache/servicecomb-service-center/server/plugin/registry"
 	"time"
 )
+
 // 续约任务 操作的是instanceId
 type LeaseTask struct {
 	Client registry.Registry
 	//任务标识 /domain/project/serviceId/instanceId
-	key     string
+	key string
 	// 租约id
 	LeaseID int64
 	// 续约的结果 续约时长
-	TTL     int64
+	TTL int64
 	// 创建时间
 	recvTime simple.Time
 	// 最近一次执行的err
-	err      error
+	err error
 }
 
 func (lat *LeaseTask) Key() string {
 	return lat.key
 }
+
 // 调用注册中心 续约
 func (lat *LeaseTask) Do(ctx context.Context) (err error) {
 	recv, start := lat.ReceiveTime(), time.Now()
@@ -84,6 +86,7 @@ func (lat *LeaseTask) Err() error {
 func (lat *LeaseTask) ReceiveTime() time.Time {
 	return lat.recvTime.Local()
 }
+
 // 创建续约任务
 func NewLeaseAsyncTask(op registry.PluginOp) *LeaseTask {
 	return &LeaseTask{

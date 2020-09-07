@@ -38,7 +38,7 @@ func init() {
 	InitAPI()
 
 	apiServer = &APIServer{
-		isClose:   true,  //初始关闭状态
+		isClose:   true, //初始关闭状态
 		err:       make(chan error, 1),
 		goroutine: gopool.New(context.Background()),
 	}
@@ -66,8 +66,8 @@ type APIServer struct {
 
 	restSrv   *rest.Server
 	isClose   bool
-	forked    bool			// 标记是否重启
-	err       chan error  // 收集error 上游阻塞在chan上
+	forked    bool       // 标记是否重启
+	err       chan error // 收集error 上游阻塞在chan上
 	goroutine *gopool.Pool
 }
 
@@ -82,9 +82,9 @@ func (s *APIServer) Err() <-chan error {
 
 // 优雅重启
 func (s *APIServer) graceDone() {
-	grace.Before(s.MarkForked) // 进行fork重启先标记s.forked=true，不进行instance的下线操作
-	grace.After(s.Stop)			// 重启完关闭apiServer
-	if err := grace.Done(); err != nil {	// 关闭父进程
+	grace.Before(s.MarkForked)           // 进行fork重启先标记s.forked=true，不进行instance的下线操作
+	grace.After(s.Stop)                  // 重启完关闭apiServer
+	if err := grace.Done(); err != nil { // 关闭父进程
 		log.Errorf(err, "server reload failed")
 	}
 }

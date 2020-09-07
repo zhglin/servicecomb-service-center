@@ -33,14 +33,14 @@ var (
 // 利用notify组件 收集系统内部异常
 type Service struct {
 	nf.Subscriber
-	alarms util.ConcurrentMap  // 保存出现的异常
+	alarms util.ConcurrentMap // 保存出现的异常
 }
 
 // 发布异常事件（出现异常）
 func (ac *Service) Raise(id model.ID, fields ...model.Field) error {
 	ae := &model.AlarmEvent{
 		Event:  nf.NewEvent(ALARM, Subject, ""),
-		Status: Activated,	// 已出现异常
+		Status: Activated, // 已出现异常
 		ID:     id,
 		Fields: util.NewJSONObject(), // 异常信息
 	}
@@ -88,7 +88,7 @@ func (ac *Service) OnMessage(evt nf.Event) {
 			}
 		}
 	default:
-		ac.alarms.Put(alarm.ID, alarm)  // 记录异常
+		ac.alarms.Put(alarm.ID, alarm) // 记录异常
 	}
 	log.Debugf("alarm[%s] %s, %v", alarm.ID, alarm.Status, alarm.Fields)
 }

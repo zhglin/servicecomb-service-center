@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	BUILDIN       = "buildin"  //默认使用的plugin
+	BUILDIN       = "buildin" //默认使用的plugin
 	STATIC        = "static"
 	DYNAMIC       = "dynamic"
 	keyPluginName = "name"

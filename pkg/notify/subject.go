@@ -23,7 +23,7 @@ import (
 
 // 主题
 type Subject struct {
-	name   string   //主题名称
+	name string //主题名称
 	//相同主题可以通知到不同的订阅者组，组名称=>Group，一个主题对应多个group
 	groups *util.ConcurrentMap
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/apache/servicecomb-service-center/pkg/log"
 )
+
 // 去重队列 不管put多少个只会存在一个未消费的item
 type UniQueue struct {
 	queue chan interface{}

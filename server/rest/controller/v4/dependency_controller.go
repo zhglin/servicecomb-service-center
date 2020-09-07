@@ -36,10 +36,10 @@ type DependencyService struct {
 
 /*
 	添加查询consumer的provider的依赖关系
-	添加时指定的是MicroServiceKey
-	获取的是MicroService
+	添加时指定的是MicroServiceKey,可以是不同的domain，project
+	获取的是MicroService,获取可以指定是否获取不同的domainProject实例
     添加之后会通过事件的方式被dependency_event_handler处理
- */
+*/
 func (s *DependencyService) URLPatterns() []rest.Route {
 	return []rest.Route{
 		{Method: rest.HTTPMethodPost, Path: "/v4/:project/registry/dependencies", Func: s.AddDependenciesForMicroServices},
@@ -101,7 +101,7 @@ func (s *DependencyService) GetConProDependencies(w http.ResponseWriter, r *http
 	request := &pb.GetDependenciesRequest{
 		ServiceId:  query.Get(":consumerId"),
 		SameDomain: query.Get("sameDomain") == "1", // 是否允许跨domain/project
-		NoSelf:     query.Get("noSelf") == "1", // 是否允许consumer依赖自己
+		NoSelf:     query.Get("noSelf") == "1",     // 是否允许consumer依赖自己
 	}
 	resp, _ := core.ServiceAPI.GetConsumerDependencies(r.Context(), request)
 	respInternal := resp.Response

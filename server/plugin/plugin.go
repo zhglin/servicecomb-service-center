@@ -33,6 +33,7 @@ var pluginMgr = &Manager{}
 func init() {
 	pluginMgr.Initialize()
 }
+
 //plugin实例
 type wrapInstance struct {
 	dynamic  bool
@@ -46,7 +47,7 @@ type wrapInstance struct {
 //plugin管理器
 type Manager struct {
 	//plugin配置 PluginName plugin名字 PluginImplName plugin子名称 一个plugin可以有多个实现
-	plugins   map[Name]map[ImplName]*Plugin
+	plugins map[Name]map[ImplName]*Plugin
 	//plugin实例
 	instances map[Name]*wrapInstance
 }

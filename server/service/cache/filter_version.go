@@ -29,6 +29,7 @@ import (
 type VersionRuleFilter struct {
 }
 
+// provider的versionRule
 func (f *VersionRuleFilter) Name(ctx context.Context, _ *cache.Node) string {
 	provider := ctx.Value(CtxFindProvider).(*pb.MicroServiceKey)
 	return provider.Version
@@ -45,7 +46,7 @@ func (f *VersionRuleFilter) Init(ctx context.Context, parent *cache.Node) (node 
 	}
 
 	provider := ctx.Value(CtxFindProvider).(*pb.MicroServiceKey)
-	// 版本规则
+	// 根据provider的版本规则获取provider的serviceId
 	ids, exist, err := serviceUtil.FindServiceIds(ctx, provider.Version, provider)
 	if err != nil {
 		consumer := ctx.Value(CtxFindConsumer).(*pb.MicroService)
@@ -58,6 +59,7 @@ func (f *VersionRuleFilter) Init(ctx context.Context, parent *cache.Node) (node 
 		return
 	}
 
+	// 一个provider可以对应多个符合versionRule的provider的service
 	node = cache.NewNode()
 	node.Cache.Set(Find, &VersionRuleCacheItem{
 		ServiceIds: ids,

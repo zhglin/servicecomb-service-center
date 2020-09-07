@@ -65,6 +65,7 @@ func (h *ServiceEventHandler) OnEvent(evt discovery.KvEvent) {
 	default:
 	}
 
+	// 初始化事件跳过
 	if evt.Type == pb.EVT_INIT {
 		return
 	}

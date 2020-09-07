@@ -32,6 +32,7 @@ import (
 type TagsFilter struct {
 }
 
+// provider的别名
 func (f *TagsFilter) Name(ctx context.Context, _ *cache.Node) string {
 	tags, _ := ctx.Value(CtxFindTags).([]string)
 	sort.Strings(tags)
@@ -40,6 +41,7 @@ func (f *TagsFilter) Name(ctx context.Context, _ *cache.Node) string {
 
 func (f *TagsFilter) Init(ctx context.Context, parent *cache.Node) (node *cache.Node, err error) {
 	tags, _ := ctx.Value(CtxFindTags).([]string)
+	// 不存在别名, 此节点的cache直接用parent的cache
 	if len(tags) == 0 {
 		node = cache.NewNode()
 		node.Cache = parent.Cache
@@ -48,11 +50,12 @@ func (f *TagsFilter) Init(ctx context.Context, parent *cache.Node) (node *cache.
 
 	var ids []string
 
+	// 获取parent的servicesId
 	targetDomainProject := util.ParseTargetDomainProject(ctx)
-	pCopy := *parent.Cache.Get(Find).(*VersionRuleCacheItem)
+	pCopy := *parent.Cache.Get(Find).(*VersionRuleCacheItem) // 这里是个值copy
 
 loopProviderIds:
-	for _, providerServiceID := range pCopy.ServiceIds {
+	for _, providerServiceID := range pCopy.ServiceIds { // 符合versionRule的多个serviceIds
 		tagsFromETCD, err := serviceUtil.GetTagsUtils(ctx, targetDomainProject, providerServiceID)
 		if err != nil {
 			consumer := ctx.Value(CtxFindConsumer).(*pb.MicroService)
@@ -65,14 +68,19 @@ loopProviderIds:
 		if len(tagsFromETCD) == 0 {
 			continue
 		}
+
+		// 有一个tag不匹配就跳过
 		for _, tag := range tags {
 			if _, ok := tagsFromETCD[tag]; !ok {
 				continue loopProviderIds
 			}
 		}
+
+		// 全部匹配  不同的serviceId可以是相同的tags
 		ids = append(ids, providerServiceID)
 	}
 
+	// 更新此node的查询结果
 	pCopy.ServiceIds = ids
 
 	node = cache.NewNode()

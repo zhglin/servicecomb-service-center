@@ -93,11 +93,11 @@ func init() {
 
 	// handle requests after routing.
 	// 匹配到路由后的后置处理 api处理之前
-	accesslog.RegisterHandlers()	//操作成功日志
-	maxbody.RegisterHandlers()      //限制请求的body大小
-	metric.RegisterHandlers()		//监控
-	tracing.RegisterHandlers()		//链路追踪
-	auth.RegisterHandlers()			//auth认证
-	context.RegisterHandlers()      //context设置domain project
-	cache.RegisterHandlers()		//context设置cache相关标记
+	accesslog.RegisterHandlers() //操作成功日志
+	maxbody.RegisterHandlers()   //限制请求的body大小
+	metric.RegisterHandlers()    //监控
+	tracing.RegisterHandlers()   //链路追踪
+	auth.RegisterHandlers()      //auth认证
+	context.RegisterHandlers()   //context设置domain project
+	cache.RegisterHandlers()     //context设置cache相关标记
 }

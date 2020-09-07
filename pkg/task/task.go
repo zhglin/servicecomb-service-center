@@ -19,9 +19,10 @@
 package task
 
 import "context"
+
 // task接口
 type Task interface {
-	Key() string  // task标识
+	Key() string                  // task标识
 	Do(ctx context.Context) error // 执行
 	Err() error
 }

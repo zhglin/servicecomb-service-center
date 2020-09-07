@@ -23,7 +23,7 @@ import (
 
 // 订阅者组
 type Group struct {
-	name        string // 组名称
+	name string // 组名称
 	// 相同group的订阅者  订阅者id=>订阅者  一个group中多个订阅者
 	subscribers *util.ConcurrentMap
 }

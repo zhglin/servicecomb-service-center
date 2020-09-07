@@ -38,7 +38,7 @@ var (
 	// restServer使用的路由  DefaultServerMux 是个引用
 	DefaultServerMux = http.NewServeMux()
 	// 不同的子树对应的serverMux
-	serveMuxMap      = map[string]*http.ServeMux{
+	serveMuxMap = map[string]*http.ServeMux{
 		defaultServeMux: DefaultServerMux,
 	}
 )

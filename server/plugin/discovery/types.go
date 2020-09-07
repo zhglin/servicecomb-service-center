@@ -27,13 +27,14 @@ import (
 )
 
 var (
-	Types     []Type    //已注册的类型
-	typeNames []string  //对应的已注册的类型名称
+	Types     []Type   //已注册的类型
+	typeNames []string //对应的已注册的类型名称
 )
 
 const (
 	TypeError = Type(-1)
 )
+
 // etcd中数据类型
 type Type int
 
@@ -62,6 +63,7 @@ func RegisterType(name string) (newId Type, err error) {
 	typeNames = append(typeNames, name)
 	return
 }
+
 // 缓存中的数据
 type KeyValue struct {
 	Key            []byte
@@ -77,6 +79,7 @@ func (kv *KeyValue) String() string {
 	return fmt.Sprintf("{key: '%s', value: %s, version: %d, cluster: '%s'}",
 		util.BytesToStringWithNoCopy(kv.Key), util.BytesToStringWithNoCopy(b), kv.Version, kv.ClusterName)
 }
+
 // 创建cache的value
 func NewKeyValue() *KeyValue {
 	return &KeyValue{ClusterName: registry.Configuration().ClusterName}
@@ -86,18 +89,21 @@ type Response struct {
 	Kvs   []*KeyValue
 	Count int64
 }
+
 // 事件
 type KvEvent struct {
-	Revision int64 //版本号
+	Revision int64           //版本号
 	Type     types.EventType //事件类型
-	KV       *KeyValue //数据
-	CreateAt simple.Time //创建时间
+	KV       *KeyValue       //数据
+	CreateAt simple.Time     //创建时间
 }
+
 // 事件处理函数
 type KvEventFunc func(evt KvEvent)
+
 // 事件处理器
 type KvEventHandler interface {
-	Type() Type	//数据类型
+	Type() Type          //数据类型
 	OnEvent(evt KvEvent) //处理函数 类型就是KvEventFunc
 }
 

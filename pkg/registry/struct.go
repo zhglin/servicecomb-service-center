@@ -119,17 +119,23 @@ type FrameWorkProperty struct {
 	Version string `protobuf:"bytes,2,opt,name=version" json:"version,omitempty"`
 }
 
+// etcd中数据
 type ServiceRule struct {
-	RuleId       string `protobuf:"bytes,1,opt,name=ruleId" json:"ruleId,omitempty"`
-	RuleType     string `protobuf:"bytes,2,opt,name=ruleType" json:"ruleType,omitempty"`
-	Attribute    string `protobuf:"bytes,3,opt,name=attribute" json:"attribute,omitempty"`
+	RuleId string `protobuf:"bytes,1,opt,name=ruleId" json:"ruleId,omitempty"`
+	// WHITE 白名单  其他都是黑名单
+	RuleType string `protobuf:"bytes,2,opt,name=ruleType" json:"ruleType,omitempty"`
+	// 使用MicroService的哪个key进行校验,如果是"tag_"开头代表使用service的tags,例tag_a即从tags取a的值
+	Attribute string `protobuf:"bytes,3,opt,name=attribute" json:"attribute,omitempty"`
+	// 正则表达式
 	Pattern      string `protobuf:"bytes,4,opt,name=pattern" json:"pattern,omitempty"`
 	Description  string `protobuf:"bytes,5,opt,name=description" json:"description,omitempty"`
 	Timestamp    string `protobuf:"bytes,6,opt,name=timestamp" json:"timestamp,omitempty"`
 	ModTimestamp string `protobuf:"bytes,7,opt,name=modTimestamp" json:"modTimestamp,omitempty"`
 }
 
+// service权限
 type AddOrUpdateServiceRule struct {
+	// WHITE
 	RuleType    string `protobuf:"bytes,1,opt,name=ruleType" json:"ruleType,omitempty"`
 	Attribute   string `protobuf:"bytes,2,opt,name=attribute" json:"attribute,omitempty"`
 	Pattern     string `protobuf:"bytes,3,opt,name=pattern" json:"pattern,omitempty"`
@@ -186,13 +192,13 @@ func (m *GetExistenceResponse) GetSummary() string {
 // 注册service
 type CreateServiceRequest struct {
 	// service信息
-	Service   *MicroService             `protobuf:"bytes,1,opt,name=service" json:"service,omitempty"`
+	Service *MicroService `protobuf:"bytes,1,opt,name=service" json:"service,omitempty"`
 	// 黑白名单
-	Rules     []*AddOrUpdateServiceRule `protobuf:"bytes,2,rep,name=rules" json:"rules,omitempty"`
+	Rules []*AddOrUpdateServiceRule `protobuf:"bytes,2,rep,name=rules" json:"rules,omitempty"`
 	// 标签
-	Tags      map[string]string         `protobuf:"bytes,3,rep,name=tags" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Tags map[string]string `protobuf:"bytes,3,rep,name=tags" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// 对应的多个instance
-	Instances []*MicroServiceInstance   `protobuf:"bytes,4,rep,name=instances" json:"instances,omitempty"`
+	Instances []*MicroServiceInstance `protobuf:"bytes,4,rep,name=instances" json:"instances,omitempty"`
 }
 
 type CreateServiceResponse struct {
@@ -313,13 +319,13 @@ type DeleteServiceTagsResponse struct {
 }
 
 type HealthCheck struct {
-	Mode     string `protobuf:"bytes,1,opt,name=mode" json:"mode,omitempty"`
-	Port     int32  `protobuf:"varint,2,opt,name=port" json:"port,omitempty"`
+	Mode string `protobuf:"bytes,1,opt,name=mode" json:"mode,omitempty"`
+	Port int32  `protobuf:"varint,2,opt,name=port" json:"port,omitempty"`
 	// 时间间隔  ttl := int64(Interval * (Times + 1))
-	Interval int32  `protobuf:"varint,3,opt,name=interval" json:"interval,omitempty"`
+	Interval int32 `protobuf:"varint,3,opt,name=interval" json:"interval,omitempty"`
 	// 次数 多少个interval续约失败删除节点
-	Times    int32  `protobuf:"varint,4,opt,name=times" json:"times,omitempty"`
-	Url      string `protobuf:"bytes,5,opt,name=url" json:"url,omitempty"`
+	Times int32  `protobuf:"varint,4,opt,name=times" json:"times,omitempty"`
+	Url   string `protobuf:"bytes,5,opt,name=url" json:"url,omitempty"`
 }
 
 type DataCenterInfo struct {

@@ -54,7 +54,7 @@ func (cb *Callback) Invoke(r Result) {
 		})
 		return
 	}
-	defer log.Recover()  //处理Callback的panic
+	defer log.Recover() //处理Callback的panic
 	cb.Func(r)
 }
 

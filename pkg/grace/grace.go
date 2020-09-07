@@ -36,15 +36,15 @@ const (
 
 //https://www.lmlphp.com/user/1234/article/item/29949/  Golang中的优雅重启
 var (
-	isFork         bool				//标记是否是子进程
+	isFork         bool //标记是否是子进程
 	filesOrder     string
-	files          []*os.File       // listener的链接，被新进程继承
-	filesOffsetMap map[string]int   // listener的链接 索引
+	files          []*os.File     // listener的链接，被新进程继承
+	filesOffsetMap map[string]int // listener的链接 索引
 
-	registerSignals []os.Signal 	// 监听的信号
+	registerSignals []os.Signal                    // 监听的信号
 	SignalHooks     map[int]map[os.Signal][]func() // 信号的前置，后置的处理函数
 	graceMux        sync.Mutex
-	forked          bool	// 标记开始复制
+	forked          bool // 标记开始复制
 )
 
 func init() {
@@ -52,10 +52,10 @@ func init() {
 	flag.StringVar(&filesOrder, "filesorder", "", "previous initialization FDs order")
 
 	registerSignals = []os.Signal{
-		syscall.SIGHUP, //用户终端连接(正常或非正常)结束时发出, 通常是在终端的控制进程结束时, 通知同一session内的各个作业, 这时它们与控制终端不再关联。
-		syscall.SIGINT, //程序终止(interrupt)信号, 在用户键入INTR字符(通常是Ctrl+C)时发出，用于通知前台进程组终止进程
-		syscall.SIGKILL,//用来立即结束程序的运行. 本信号不能被阻塞、处理和忽略。
-		syscall.SIGTERM,//程序结束(terminate)信号, 与SIGKILL不同的是该信号可以被阻塞和处理。通常用来要求程序自己正常退出，shell命令kill缺省产生这个信号
+		syscall.SIGHUP,  //用户终端连接(正常或非正常)结束时发出, 通常是在终端的控制进程结束时, 通知同一session内的各个作业, 这时它们与控制终端不再关联。
+		syscall.SIGINT,  //程序终止(interrupt)信号, 在用户键入INTR字符(通常是Ctrl+C)时发出，用于通知前台进程组终止进程
+		syscall.SIGKILL, //用来立即结束程序的运行. 本信号不能被阻塞、处理和忽略。
+		syscall.SIGTERM, //程序结束(terminate)信号, 与SIGKILL不同的是该信号可以被阻塞和处理。通常用来要求程序自己正常退出，shell命令kill缺省产生这个信号
 	}
 	filesOffsetMap = make(map[string]int)
 
@@ -153,7 +153,7 @@ func fork() (err error) {
 	}
 
 	// add fork and file descriptions order flags
-	args := append(parseCommandLine(), "-fork")   // 标记isFork=true
+	args := append(parseCommandLine(), "-fork") // 标记isFork=true
 	if len(filesOffsetMap) > 0 {
 		args = append(args, fmt.Sprintf(`-filesorder=%s`, strings.Join(orderArgs, ",")))
 	}
@@ -174,7 +174,7 @@ func parseCommandLine() (args []string) {
 	}
 	// ignore process path
 	for _, arg := range os.Args[1:] {
-		if arg == "-fork" {  // 去掉后面的-fork -filesorder
+		if arg == "-fork" { // 去掉后面的-fork -filesorder
 			// ignore fork flags
 			break
 		}

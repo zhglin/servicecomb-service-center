@@ -49,9 +49,10 @@ func TestTree(t *testing.T) {
 		t.Fatalf(`TestTree failed`)
 	}
 }
+
 /*
   					6
 				3		7
 			2		4
 						5
- */
+*/

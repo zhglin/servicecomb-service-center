@@ -27,8 +27,8 @@ import (
 
 type Executor struct {
 	pool       *gopool.Pool
-	tasks      *queue.UniQueue  //队列
-	latestTask Task //最后一次执行的task实例
+	tasks      *queue.UniQueue //队列
+	latestTask Task            //最后一次执行的task实例
 }
 
 // 添加task
@@ -64,6 +64,7 @@ func (s *Executor) Execute() {
 	default:
 	}
 }
+
 // 关闭executor
 func (s *Executor) Close() {
 	s.tasks.Close()

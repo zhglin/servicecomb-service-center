@@ -50,7 +50,7 @@ func (w *innerWatcher) process(_ context.Context) {
 	})
 
 	select {
-	case <-stopCh:	//主动取消
+	case <-stopCh: //主动取消
 		// timed out or exception
 		w.Stop() // 关闭EventBus 解除上层的for
 		cancel()

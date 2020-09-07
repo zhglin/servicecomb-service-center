@@ -29,6 +29,7 @@ import (
 type AccessibleFilter struct {
 }
 
+// consumer的serviceId 对应 的符合权限的serviceId
 func (f *AccessibleFilter) Name(ctx context.Context, _ *cache.Node) string {
 	consumer := ctx.Value(CtxFindConsumer).(*pb.MicroService)
 	return consumer.ServiceId
@@ -37,8 +38,10 @@ func (f *AccessibleFilter) Name(ctx context.Context, _ *cache.Node) string {
 func (f *AccessibleFilter) Init(ctx context.Context, parent *cache.Node) (node *cache.Node, err error) {
 	var ids []string
 	consumerID := ctx.Value(CtxFindConsumer).(*pb.MicroService).ServiceId
+	// 上面几步过滤出来的provider的serviceId，值copy
 	pCopy := *parent.Cache.Get(Find).(*VersionRuleCacheItem)
 	for _, providerServiceID := range pCopy.ServiceIds {
+		// 每个serviceIds做权限过滤
 		if err := serviceUtil.Accessible(ctx, consumerID, providerServiceID); err != nil {
 			provider := ctx.Value(CtxFindProvider).(*pb.MicroServiceKey)
 			findFlag := fmt.Sprintf("consumer '%s' find provider %s/%s/%s", consumerID,
@@ -49,6 +52,7 @@ func (f *AccessibleFilter) Init(ctx context.Context, parent *cache.Node) (node *
 		ids = append(ids, providerServiceID)
 	}
 
+	// 设置符合权限的serviceId
 	pCopy.ServiceIds = ids
 
 	node = cache.NewNode()

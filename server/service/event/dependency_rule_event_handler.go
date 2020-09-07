@@ -27,6 +27,8 @@ import (
 
 // DependencyRuleEventHandler reset the find instances cache
 // when provider dependency rule is changed
+
+// dependency_event_handler处理过后会生成consumer以及provider的dependencyRule事件
 type DependencyRuleEventHandler struct {
 }
 
@@ -34,15 +36,21 @@ func (h *DependencyRuleEventHandler) Type() discovery.Type {
 	return backend.DependencyRule
 }
 
+// 只处理provider的被依赖记录
+// update,delete事件删除cache，忽略create事件
 func (h *DependencyRuleEventHandler) OnEvent(evt discovery.KvEvent) {
 	action := evt.Type
 	if action != pb.EVT_UPDATE && action != pb.EVT_DELETE {
 		return
 	}
+
+	// 忽略consumer事件
 	t, providerKey := core.GetInfoFromDependencyRuleKV(evt.KV.Key)
 	if t != core.DepsProvider {
 		return
 	}
+
+	// 删除provider cache
 	log.Debugf("caught [%s] provider rule[%s/%s/%s/%s] event",
 		action, providerKey.Environment, providerKey.AppId, providerKey.ServiceName, providerKey.Version)
 	cache.DependencyRule.Remove(providerKey)

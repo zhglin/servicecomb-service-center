@@ -24,7 +24,7 @@ const (
 	EXISTENCE_MS     string = "microservice"
 	EXISTENCE_SCHEMA string = "schema"
 
-	PROP_ALLOW_CROSS_APP = "allowCrossApp"
+	PROP_ALLOW_CROSS_APP = "allowCrossApp" // MicroService中Properties的key 代表权限 value=true
 
 	Response_SUCCESS int32 = 0
 

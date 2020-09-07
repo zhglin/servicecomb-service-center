@@ -18,15 +18,16 @@
 package cache
 
 import "github.com/apache/servicecomb-service-center/pkg/util"
+
 //节点的信息
 type Node struct {
 	// user data
-	Cache *Cache				//存储value
+	Cache *Cache //存储value
 	// tree will set the value below after the node added in.
-	Name   string				//节点名称
-	Tree   *Tree				//顶级树
-	Childs *util.ConcurrentMap  //子级node
-	Level  int					//层级数
+	Name   string              //节点名称
+	Tree   *Tree               //顶级树
+	Childs *util.ConcurrentMap //子级node
+	Level  int                 //层级数
 }
 
 func (n *Node) ChildNodes() (nodes []*Node) {

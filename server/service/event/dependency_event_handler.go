@@ -49,7 +49,7 @@ const defaultEventHandleInterval = 5 * time.Minute
 	Override代表是分多次添加provider，还是一次性全部添加provider
 	如果是一次性添加的会进行provider的校验，不存在的provider会分别从consumer，provider里删掉
 	同一个consumer多次添加provider也会根据Override的不同，与现有的provider进行不同的判断过滤，进行数据的合并
- */
+*/
 type DependencyEventHandler struct {
 	signals *queue.UniQueue
 }

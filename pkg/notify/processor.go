@@ -25,9 +25,9 @@ import (
 
 // 同notify.type类型的所有subject(主题)
 type Processor struct {
-	*queue.TaskQueue	//task的处理
+	*queue.TaskQueue //task的处理
 
-	name     string // notify.type的名称
+	name     string              // notify.type的名称
 	subjects *util.ConcurrentMap //subscriber的subject(主题)对应的subject结构，一个主题可以对应多个订阅者
 }
 

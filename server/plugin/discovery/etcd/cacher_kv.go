@@ -48,7 +48,7 @@ type KvCacher struct {
 
 	reListCount int
 
-	ready     chan struct{}
+	ready chan struct{}
 	// 关联register提供 list watch接口
 	lw        ListWatch
 	mux       sync.Mutex
@@ -522,8 +522,8 @@ func (c *KvCacher) Cache() discovery.CacheReader {
 // 启动函数
 func (c *KvCacher) Run() {
 	c.once.Do(func() {
-		c.goroutine.Do(c.refresh) //cache同步
-		c.goroutine.Do(c.deferHandle) //deferHandle结果处理
+		c.goroutine.Do(c.refresh)       //cache同步
+		c.goroutine.Do(c.deferHandle)   //deferHandle结果处理
 		c.goroutine.Do(c.reportMetrics) // 上报监控
 	})
 }

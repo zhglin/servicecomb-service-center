@@ -20,9 +20,9 @@ package chain
 // http调用链  chain中的handler都是依次同步调用
 type Chain struct {
 	// 标识不同路由子树，不同的子树可以设置不同的chain
-	name         string
+	name string
 	// handler
-	handlers     []Handler
+	handlers []Handler
 	// 已执行到第几个handler
 	currentIndex int
 }

@@ -55,8 +55,8 @@ type ServiceCenterServer struct {
 	apiService    *APIServer
 	notifyService *nf.Service
 	// discovery
-	cacheService  *backend.KvStore
-	goroutine     *gopool.Pool
+	cacheService *backend.KvStore
+	goroutine    *gopool.Pool
 }
 
 func (s *ServiceCenterServer) Run() {
@@ -148,7 +148,7 @@ func (s *ServiceCenterServer) compactBackendService() {
 					continue
 				}
 
-					err = backend.Registry().Compact(ctx, delta)
+				err = backend.Registry().Compact(ctx, delta)
 				if err != nil {
 					log.Error("", err)
 				}

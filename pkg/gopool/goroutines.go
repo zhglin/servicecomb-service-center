@@ -24,18 +24,21 @@ import (
 	"sync"
 	"time"
 )
+
 // 协程池
 var GlobalConfig = Configure()
+
 // 全局的协程池
 var defaultGo *Pool
 
 func init() {
 	defaultGo = New(context.Background())
 }
+
 // 协程池配置
 type Config struct {
-	Concurrent  int  //最大协程数
-	IdleTimeout time.Duration	//每个协程的最大空闲时间
+	Concurrent  int           //最大协程数
+	IdleTimeout time.Duration //每个协程的最大空闲时间
 }
 
 func (c *Config) Workers(max int) *Config {
@@ -73,6 +76,7 @@ type Pool struct {
 	wg     sync.WaitGroup
 	closed bool
 }
+
 // 执行f
 func (g *Pool) execute(f func(ctx context.Context)) {
 	defer log.Recover()
@@ -97,6 +101,7 @@ func (g *Pool) Do(f func(context.Context)) *Pool {
 	}
 	return g
 }
+
 // 循环执行f
 func (g *Pool) loop(f func(context.Context)) {
 	defer g.wg.Done()
@@ -163,6 +168,7 @@ func (g *Pool) Done() {
 	// 阻塞到所有协程退出
 	g.wg.Wait()
 }
+
 // 创建协程池
 func New(ctx context.Context, cfgs ...*Config) *Pool {
 	ctx, cancel := context.WithCancel(ctx)
@@ -179,10 +185,12 @@ func New(ctx context.Context, cfgs ...*Config) *Pool {
 	}
 	return gr
 }
+
 //添加到全局的goPool
 func Go(f func(context.Context)) {
 	defaultGo.Do(f)
 }
+
 // 关闭全局的goPool
 func CloseAndWait() {
 	defaultGo.Close(true)

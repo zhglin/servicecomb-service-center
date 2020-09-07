@@ -32,9 +32,9 @@ type Field struct {
 // 异常的事件
 type AlarmEvent struct {
 	nf.Event `json:"-"`
-	Status   Status          `json:"status"`    // 状态  Activated  Cleared
-	ID       ID              `json:"id"`        // 异常类型
-	Fields   util.JSONObject `json:"fields,omitempty"`  // 异常信息
+	Status   Status          `json:"status"`           // 状态  Activated  Cleared
+	ID       ID              `json:"id"`               // 异常类型
+	Fields   util.JSONObject `json:"fields,omitempty"` // 异常信息
 }
 
 func (ae *AlarmEvent) FieldBool(key string) bool {

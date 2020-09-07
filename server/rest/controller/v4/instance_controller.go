@@ -51,6 +51,8 @@ func (s *MicroServiceInstanceService) URLPatterns() []rest.Route {
 		{Method: rest.HTTPMethodPut, Path: "/v4/:project/registry/heartbeats", Func: s.HeartbeatSet},
 	}
 }
+
+// 注册一个service实例
 func (s *MicroServiceInstanceService) RegisterInstance(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -59,6 +61,7 @@ func (s *MicroServiceInstanceService) RegisterInstance(w http.ResponseWriter, r 
 		return
 	}
 
+	// 处理参数
 	request := &pb.RegisterInstanceRequest{}
 	err = json.Unmarshal(message, request)
 	if err != nil {
@@ -118,6 +121,7 @@ func (s *MicroServiceInstanceService) HeartbeatSet(w http.ResponseWriter, r *htt
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 注销service Instance，没有进行watch通知
 func (s *MicroServiceInstanceService) UnregisterInstance(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	request := &pb.UnregisterInstanceRequest{
@@ -128,6 +132,7 @@ func (s *MicroServiceInstanceService) UnregisterInstance(w http.ResponseWriter, 
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// consumer查找provider instance
 func (s *MicroServiceInstanceService) FindInstances(w http.ResponseWriter, r *http.Request) {
 	var ids []string
 	query := r.URL.Query()
@@ -136,12 +141,12 @@ func (s *MicroServiceInstanceService) FindInstances(w http.ResponseWriter, r *ht
 		ids = strings.Split(keys, ",")
 	}
 	request := &pb.FindInstancesRequest{
-		ConsumerServiceId: r.Header.Get("X-ConsumerId"),
-		AppId:             query.Get("appId"),
-		ServiceName:       query.Get("serviceName"),
-		VersionRule:       query.Get("version"),
-		Environment:       query.Get("env"),
-		Tags:              ids,
+		ConsumerServiceId: r.Header.Get("X-ConsumerId"), //consumer service id
+		AppId:             query.Get("appId"),           //provider appId
+		ServiceName:       query.Get("serviceName"),     //provider serviceName
+		VersionRule:       query.Get("version"),         //provider versionRule
+		Environment:       query.Get("env"),             //provider env
+		Tags:              ids,                          //provider tag
 	}
 
 	ctx := util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), query.Get(":project"))

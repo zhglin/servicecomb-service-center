@@ -21,11 +21,12 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/registry"
 	"github.com/apache/servicecomb-service-center/pkg/util"
 )
+
 // 存放etcd中的具体路径
 const (
 	SPLIT                    = "/"
 	RegistryRootKey          = "cse-sr"
-	RegistrySysKey           = "sys"  //service_center的全局最大版本号
+	RegistrySysKey           = "sys" //service_center的全局最大版本号
 	RegistryServiceKey       = "ms"
 	RegistryInstanceKey      = "inst"
 	RegistryFile             = "files"
@@ -90,6 +91,7 @@ func GetServiceAppKey(domainProject, env, appID string) string {
 	}, SPLIT)
 }
 
+// /cse-sr/ms/rules/domin/project/
 func GetServiceRuleRootKey(domainProject string) string {
 	return util.StringJoin([]string{
 		GetRootKey(),

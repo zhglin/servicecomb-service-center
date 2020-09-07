@@ -39,9 +39,9 @@ type URLPattern struct {
 
 // path对应的handler
 type urlPatternHandler struct {
-	Name string	// Route中Func名称
-	Path string // Route的Path
-	http.Handler // Route的Func
+	Name         string // Route中Func名称
+	Path         string // Route的Path
+	http.Handler        // Route的Func
 }
 
 // Route is a http route
@@ -68,7 +68,7 @@ type ROAServantService interface {
 // 支持内部自定义匹配规则
 type ROAServerHandler struct {
 	handlers  map[string][]*urlPatternHandler
-	chainName string   //通过chainName关联chain中的handler
+	chainName string //通过chainName关联chain中的handler
 }
 
 // NewROAServerHander news an ROAServerHandler
@@ -245,7 +245,7 @@ func (roa *urlPatternHandler) try(path string) (p string, _ bool) {
 				return p, true
 			}
 			return "", false
-		case roa.Path[j] == ':':  // 处理动态参数
+		case roa.Path[j] == ':': // 处理动态参数
 			var val string
 			var nextc byte
 			o := j

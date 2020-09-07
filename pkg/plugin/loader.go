@@ -33,17 +33,20 @@ var (
 	once     sync.Once
 	regex, _ = regexp.Compile(`([A-Za-z0-9_.-]+)_plugin.so$`)
 )
+
 // dynamic plugin 信息
 type wrapPlugin struct {
 	p     *plugin.Plugin
-	funcs map[string]plugin.Symbol  //cache的函数信息
+	funcs map[string]plugin.Symbol //cache的函数信息
 }
+
 //动态组件管理器
 type Loader struct {
 	Dir     string
 	Plugins map[string]*wrapPlugin
 	mux     sync.RWMutex
 }
+
 // 初始化Loader
 func (pm *Loader) Init() {
 	pm.Plugins = make(map[string]*wrapPlugin, 10)
@@ -53,6 +56,7 @@ func (pm *Loader) Init() {
 		log.Errorf(err, "no any plugin has been loaded")
 	}
 }
+
 // 从dir中加载全量的plugin
 func (pm *Loader) ReloadPlugins() error {
 	dir := os.ExpandEnv(pm.Dir)
@@ -93,6 +97,7 @@ func (pm *Loader) ReloadPlugins() error {
 	}
 	return nil
 }
+
 // 查看plugin中是否有funcName函数
 func (pm *Loader) Find(pluginName, funcName string) (plugin.Symbol, error) {
 	pm.mux.RLock()
@@ -120,6 +125,7 @@ func (pm *Loader) Find(pluginName, funcName string) (plugin.Symbol, error) {
 	pm.mux.Unlock()
 	return f, nil
 }
+
 //是否是个dynamicPlugin
 func (pm *Loader) Exist(pluginName string) bool {
 	pm.mux.RLock()
@@ -127,6 +133,7 @@ func (pm *Loader) Exist(pluginName string) bool {
 	pm.mux.RUnlock()
 	return ok
 }
+
 // 设置plugin目录
 func SetPluginDir(dir string) {
 	loader.Dir = dir

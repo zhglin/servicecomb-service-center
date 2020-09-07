@@ -30,6 +30,6 @@ type restConn struct {
 // 自动调用
 func (c restConn) Close() (err error) {
 	err = c.Conn.Close()
-	c.server.CloseOne()  // 减少链接数
+	c.server.CloseOne() // 减少链接数
 	return
 }
