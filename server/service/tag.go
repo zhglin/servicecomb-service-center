@@ -33,7 +33,7 @@ import (
 	serviceUtil "github.com/apache/servicecomb-service-center/server/service/util"
 )
 
-// 创建tags
+// 添加tags
 func (s *MicroServiceService) AddTags(ctx context.Context, in *pb.AddServiceTagsRequest) (*pb.AddServiceTagsResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -105,6 +105,7 @@ func (s *MicroServiceService) AddTags(ctx context.Context, in *pb.AddServiceTags
 	}, nil
 }
 
+// 修改tag
 func (s *MicroServiceService) UpdateTag(ctx context.Context, in *pb.UpdateServiceTagRequest) (*pb.UpdateServiceTagResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	tagFlag := util.StringJoin([]string{in.Key, in.Value}, "/")
@@ -118,6 +119,7 @@ func (s *MicroServiceService) UpdateTag(ctx context.Context, in *pb.UpdateServic
 
 	domainProject := util.ParseDomainProject(ctx)
 
+	// serviceId校验
 	if !serviceUtil.ServiceExist(ctx, domainProject, in.ServiceId) {
 		log.Errorf(err, "update service[%s]'s tag[%s] failed, service does not exist, operator: %s",
 			in.ServiceId, tagFlag, remoteIP)
@@ -126,6 +128,7 @@ func (s *MicroServiceService) UpdateTag(ctx context.Context, in *pb.UpdateServic
 		}, nil
 	}
 
+	// 获取tags
 	tags, err := serviceUtil.GetTagsUtils(ctx, domainProject, in.ServiceId)
 	if err != nil {
 		log.Errorf(err, "update service[%s]'s tag[%s] failed, get tag failed, operator: %s",
@@ -134,6 +137,7 @@ func (s *MicroServiceService) UpdateTag(ctx context.Context, in *pb.UpdateServic
 			Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
 		}, err
 	}
+
 	//check tag 是否存在
 	if _, ok := tags[in.Key]; !ok {
 		log.Errorf(nil, "update service[%s]'s tag[%s] failed, tag does not exist, operator: %s",
@@ -143,6 +147,7 @@ func (s *MicroServiceService) UpdateTag(ctx context.Context, in *pb.UpdateServic
 		}, nil
 	}
 
+	// 修改
 	copyTags := make(map[string]string, len(tags))
 	for k, v := range tags {
 		copyTags[k] = v
@@ -167,6 +172,7 @@ func (s *MicroServiceService) UpdateTag(ctx context.Context, in *pb.UpdateServic
 	}, nil
 }
 
+// 删除tags
 func (s *MicroServiceService) DeleteTags(ctx context.Context, in *pb.DeleteServiceTagsRequest) (*pb.DeleteServiceTagsResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -179,6 +185,7 @@ func (s *MicroServiceService) DeleteTags(ctx context.Context, in *pb.DeleteServi
 
 	domainProject := util.ParseDomainProject(ctx)
 
+	// serviceId校验
 	if !serviceUtil.ServiceExist(ctx, domainProject, in.ServiceId) {
 		log.Errorf(nil, "delete service[%s]'s tags %v failed, service does not exist, operator: %s",
 			in.ServiceId, in.Keys, remoteIP)
@@ -187,6 +194,7 @@ func (s *MicroServiceService) DeleteTags(ctx context.Context, in *pb.DeleteServi
 		}, nil
 	}
 
+	// 获取所有tags
 	tags, err := serviceUtil.GetTagsUtils(ctx, domainProject, in.ServiceId)
 	if err != nil {
 		log.Errorf(err, "delete service[%s]'s tags %v failed, get service tags failed, operator: %s",
@@ -221,8 +229,8 @@ func (s *MicroServiceService) DeleteTags(ctx context.Context, in *pb.DeleteServi
 		}, err
 	}
 
+	// 写入新值 保证service存在
 	key := apt.GenerateServiceTagKey(domainProject, in.ServiceId)
-
 	resp, err := backend.Registry().TxnWithCmp(ctx,
 		[]registry.PluginOp{registry.OpPut(registry.WithStrKey(key), registry.WithValue(data))},
 		[]registry.CompareOp{registry.OpCmp(
@@ -250,6 +258,7 @@ func (s *MicroServiceService) DeleteTags(ctx context.Context, in *pb.DeleteServi
 	}, nil
 }
 
+// 获取tags
 func (s *MicroServiceService) GetTags(ctx context.Context, in *pb.GetServiceTagsRequest) (*pb.GetServiceTagsResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -261,6 +270,7 @@ func (s *MicroServiceService) GetTags(ctx context.Context, in *pb.GetServiceTags
 
 	domainProject := util.ParseDomainProject(ctx)
 
+	// serviceId校验
 	if !serviceUtil.ServiceExist(ctx, domainProject, in.ServiceId) {
 		log.Errorf(err, "get service[%s]'s tags failed, service does not exist", in.ServiceId)
 		return &pb.GetServiceTagsResponse{
@@ -268,6 +278,7 @@ func (s *MicroServiceService) GetTags(ctx context.Context, in *pb.GetServiceTags
 		}, nil
 	}
 
+	// 获取tags
 	tags, err := serviceUtil.GetTagsUtils(ctx, domainProject, in.ServiceId)
 	if err != nil {
 		log.Errorf(err, "get service[%s]'s tags failed, get tags failed", in.ServiceId)

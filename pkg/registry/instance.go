@@ -32,7 +32,9 @@ type MicroServiceInstance struct {
 	// 创建时间
 	Timestamp      string          `protobuf:"bytes,8,opt,name=timestamp" json:"timestamp,omitempty"`
 	DataCenterInfo *DataCenterInfo `protobuf:"bytes,9,opt,name=dataCenterInfo" json:"dataCenterInfo,omitempty"`
+	// 修改时间
 	ModTimestamp   string          `protobuf:"bytes,10,opt,name=modTimestamp" json:"modTimestamp,omitempty"`
+	// 版本号 service的
 	Version        string          `protobuf:"bytes,11,opt,name=version" json:"version,omitempty"`
 }
 type RegisterInstanceRequest struct {

@@ -43,6 +43,8 @@ func (s *RuleService) URLPatterns() []rest.Route {
 		{Method: rest.HTTPMethodDelete, Path: "/v4/:project/registry/microservices/:serviceId/rules/:rule_id", Func: s.DeleteRule},
 	}
 }
+
+// 添加黑白名单
 func (s *RuleService) AddRule(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -50,6 +52,8 @@ func (s *RuleService) AddRule(w http.ResponseWriter, r *http.Request) {
 		controller.WriteError(w, scerr.ErrInvalidParams, err.Error())
 		return
 	}
+
+	//rule["rules"] => []*pb.AddOrUpdateServiceRule
 	rule := map[string][]*pb.AddOrUpdateServiceRule{}
 	err = json.Unmarshal(message, &rule)
 	if err != nil {
@@ -72,6 +76,7 @@ func (s *RuleService) AddRule(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 删除指定ruleId
 func (s *RuleService) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	id := query.Get(":rule_id")
@@ -84,6 +89,7 @@ func (s *RuleService) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 修改指定ruleId
 func (s *RuleService) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -113,6 +119,7 @@ func (s *RuleService) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 获取serviceId的所有rule
 func (s *RuleService) GetRules(w http.ResponseWriter, r *http.Request) {
 	resp, _ := core.ServiceAPI.GetRule(r.Context(), &pb.GetServiceRulesRequest{
 		ServiceId: r.URL.Query().Get(":serviceId"),

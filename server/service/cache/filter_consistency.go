@@ -27,6 +27,7 @@ import (
 
 // ConsistencyFilter improves consistency.
 // Scenario: cache maybe different between several service-centers.
+// 不同的service_center节点的缓存可能会不一致，如果切换节点导致requestRev不一致就会进行重新获取
 type ConsistencyFilter struct {
 	InstancesFilter
 }
@@ -34,6 +35,7 @@ type ConsistencyFilter struct {
 func (f *ConsistencyFilter) Name(ctx context.Context, parent *cache.Node) string {
 	item := parent.Cache.Get(Find).(*VersionRuleCacheItem)
 	requestRev := ctx.Value(CtxFindRequestRev).(string)
+	// 查不到name会重新执行init
 	if len(requestRev) == 0 || requestRev == item.Rev {
 		return ""
 	}
@@ -48,8 +50,9 @@ func (f *ConsistencyFilter) Name(ctx context.Context, parent *cache.Node) string
 // It's impossible to guarantee consistency if the backend is not creditable,
 // thus in this condition RevisionFilter uses cache only.
 func (f *ConsistencyFilter) Init(ctx context.Context, parent *cache.Node) (node *cache.Node, err error) {
-	pCache := parent.Cache.Get(Find).(*VersionRuleCacheItem)
+	pCache := parent.Cache.Get(Find).(*VersionRuleCacheItem) // 这个是引用
 	requestRev := ctx.Value(CtxFindRequestRev).(string)
+	// 不可信的后端存储不进行修正
 	if len(requestRev) == 0 || requestRev == pCache.Rev ||
 		!(backend.Store().Instance().Creditable()) {
 		node = cache.NewNode()
@@ -57,6 +60,8 @@ func (f *ConsistencyFilter) Init(ctx context.Context, parent *cache.Node) (node 
 		return
 	}
 
+	// 第一次调filter_consistency，直接使用
+	// 并发会阻塞这里，修正完的pCace.Broken关闭chain，解除阻塞时因为pCache是引用数据已更新，所以不存在并发问题
 	if pCache.BrokenWait() {
 		node = cache.NewNode()
 		node.Cache.Set(Find, pCache)
@@ -64,9 +69,9 @@ func (f *ConsistencyFilter) Init(ctx context.Context, parent *cache.Node) (node 
 	}
 
 	cloneCtx := util.CloneContext(ctx)
-	cloneCtx = util.SetContext(cloneCtx, util.CtxNocache, "1")
+	cloneCtx = util.SetContext(cloneCtx, util.CtxNocache, "1") //不使用缓存进行获取
 	insts, _, err := f.Find(cloneCtx, parent)
-	if err != nil {
+	if err != nil {  // 出现异常后的第一次跳过直接使用cache
 		pCache.InitBrokenQueue()
 		return nil, err
 	}
@@ -74,7 +79,7 @@ func (f *ConsistencyFilter) Init(ctx context.Context, parent *cache.Node) (node 
 	log.Warnf("the cache of finding instances api is broken, req[%s]!=cache[%s][%s]",
 		requestRev, pCache.Rev, parent.Name)
 	pCache.Instances = insts
-	pCache.Broken()
+	pCache.Broken() // 表示修正完了，关闭chain
 
 	node = cache.NewNode()
 	node.Cache.Set(Find, pCache)

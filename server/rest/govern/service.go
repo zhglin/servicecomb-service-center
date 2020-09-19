@@ -40,20 +40,21 @@ type Service struct {
 type ServiceDetailOpt struct {
 	domainProject string
 	service       *pb.MicroService
-	countOnly     bool
+	countOnly     bool     // 只获取instance数量
 	options       []string
 }
 
 func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetServicesInfoRequest) (*pb.GetServicesInfoResponse, error) {
-	ctx = util.SetContext(ctx, util.CtxCacheOnly, "1")
+	ctx = util.SetContext(ctx, util.CtxCacheOnly, "1") // 只读cache
 
+	// options去重
 	optionMap := make(map[string]struct{}, len(in.Options))
 	for _, opt := range in.Options {
 		optionMap[opt] = struct{}{}
 	}
 
 	options := make([]string, 0, len(optionMap))
-	if _, ok := optionMap["all"]; ok {
+	if _, ok := optionMap["all"]; ok { // 所有信息
 		optionMap["statistics"] = struct{}{}
 		options = []string{"tags", "rules", "instances", "schemas", "dependencies"}
 	} else {
@@ -62,6 +63,7 @@ func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetSer
 		}
 	}
 
+	// 是否统计数量信息
 	var st *pb.Statistics
 	if _, ok := optionMap["statistics"]; ok {
 		var err error
@@ -71,6 +73,7 @@ func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetSer
 				Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
 			}, err
 		}
+		// 只统计数量信息
 		if len(optionMap) == 1 {
 			return &pb.GetServicesInfoResponse{
 				Response:   proto.CreateResponse(proto.Response_SUCCESS, "Statistics successfully."),
@@ -79,7 +82,7 @@ func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetSer
 		}
 	}
 
-	//获取所有服务
+	//获取所有服务 service信息
 	services, err := serviceUtil.GetAllServiceUtil(ctx)
 	if err != nil {
 		log.Errorf(err, "get all services by domain failed")
@@ -91,9 +94,12 @@ func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetSer
 	allServiceDetails := make([]*pb.ServiceDetail, 0, len(services))
 	domainProject := util.ParseDomainProject(ctx)
 	for _, service := range services {
+		// 是否跳过共享service
 		if !in.WithShared && apt.IsShared(proto.MicroServiceToKey(domainProject, service)) {
 			continue
 		}
+
+		// 校验指定的appId, serviceName  appId下有不同的serviceName
 		if len(in.AppId) > 0 {
 			if in.AppId != service.AppId {
 				continue
@@ -103,6 +109,7 @@ func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetSer
 			}
 		}
 
+		// service所有信息
 		serviceDetail, err := getServiceDetailUtil(ctx, ServiceDetailOpt{
 			domainProject: domainProject,
 			service:       service,
@@ -125,8 +132,9 @@ func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetSer
 	}, nil
 }
 
+// 获取指定service信息
 func (governService *Service) GetServiceDetail(ctx context.Context, in *pb.GetServiceRequest) (*pb.GetServiceDetailResponse, error) {
-	ctx = util.SetContext(ctx, util.CtxCacheOnly, "1")
+	ctx = util.SetContext(ctx, util.CtxCacheOnly, "1") // 只读本地cache
 
 	domainProject := util.ParseDomainProject(ctx)
 	options := []string{"tags", "rules", "instances", "schemas", "dependencies"}
@@ -137,6 +145,7 @@ func (governService *Service) GetServiceDetail(ctx context.Context, in *pb.GetSe
 		}, nil
 	}
 
+	// serviceId校验
 	service, err := serviceUtil.GetService(ctx, domainProject, in.ServiceId)
 	if service == nil {
 		return &pb.GetServiceDetailResponse{
@@ -156,6 +165,7 @@ func (governService *Service) GetServiceDetail(ctx context.Context, in *pb.GetSe
 		ServiceName: service.ServiceName,
 		Version:     "",
 	}
+	// 获取service的所有版本
 	versions, err := getServiceAllVersions(ctx, key)
 	if err != nil {
 		log.Errorf(err, "get service[%s/%s/%s] all versions failed",
@@ -165,6 +175,7 @@ func (governService *Service) GetServiceDetail(ctx context.Context, in *pb.GetSe
 		}, err
 	}
 
+	// 获取所有信息
 	serviceInfo, err := getServiceDetailUtil(ctx, ServiceDetailOpt{
 		domainProject: domainProject,
 		service:       service,
@@ -231,6 +242,7 @@ func (governService *Service) GetApplications(ctx context.Context, in *pb.GetApp
 	}, nil
 }
 
+// 获取serviceKey的所有versions
 func getServiceAllVersions(ctx context.Context, serviceKey *pb.MicroServiceKey) ([]string, error) {
 	var versions []string
 
@@ -256,6 +268,7 @@ func getServiceAllVersions(ctx context.Context, serviceKey *pb.MicroServiceKey) 
 	return versions, nil
 }
 
+// 获取serviceId下的所有schema
 func getSchemaInfoUtil(ctx context.Context, domainProject string, serviceID string) ([]*pb.Schema, error) {
 	key := apt.GenerateServiceSchemaKey(domainProject, serviceID, "")
 
@@ -276,6 +289,7 @@ func getSchemaInfoUtil(ctx context.Context, domainProject string, serviceID stri
 	return schemas, nil
 }
 
+// 获取service信息
 func getServiceDetailUtil(ctx context.Context, serviceDetailOpt ServiceDetailOpt) (*pb.ServiceDetail, error) {
 	serviceID := serviceDetailOpt.service.ServiceId
 	options := serviceDetailOpt.options
@@ -285,17 +299,18 @@ func getServiceDetailUtil(ctx context.Context, serviceDetailOpt ServiceDetailOpt
 		serviceDetail.Statics = new(pb.Statistics)
 	}
 
+	// 根据opt获取指定service数据
 	for _, opt := range options {
 		expr := opt
 		switch expr {
-		case "tags":
+		case "tags": // tags
 			tags, err := serviceUtil.GetTagsUtils(ctx, domainProject, serviceID)
 			if err != nil {
 				log.Errorf(err, "get service[%s]'s all tags failed", serviceID)
 				return nil, err
 			}
 			serviceDetail.Tags = tags
-		case "rules":
+		case "rules": // rules
 			rules, err := serviceUtil.GetRulesUtil(ctx, domainProject, serviceID)
 			if err != nil {
 				log.Errorf(err, "get service[%s]'s all rules failed", serviceID)
@@ -305,7 +320,7 @@ func getServiceDetailUtil(ctx context.Context, serviceDetailOpt ServiceDetailOpt
 				rule.Timestamp = rule.ModTimestamp
 			}
 			serviceDetail.Rules = rules
-		case "instances":
+		case "instances": // instances
 			if serviceDetailOpt.countOnly {
 				instanceCount, err := serviceUtil.GetInstanceCountOfOneService(ctx, domainProject, serviceID)
 				if err != nil {
@@ -322,15 +337,16 @@ func getServiceDetailUtil(ctx context.Context, serviceDetailOpt ServiceDetailOpt
 				return nil, err
 			}
 			serviceDetail.Instances = instances
-		case "schemas":
+		case "schemas": // schemas
 			schemas, err := getSchemaInfoUtil(ctx, domainProject, serviceID)
 			if err != nil {
 				log.Errorf(err, "get service[%s]'s all schemas failed", serviceID)
 				return nil, err
 			}
 			serviceDetail.SchemaInfos = schemas
-		case "dependencies":
+		case "dependencies": // dependencies
 			service := serviceDetailOpt.service
+			// 作为provider的被依赖的consumer
 			dr := serviceUtil.NewDependencyRelation(ctx, domainProject, service, service)
 			consumers, err := dr.GetDependencyConsumers(
 				serviceUtil.WithoutSelfDependency(),
@@ -340,6 +356,7 @@ func getServiceDetailUtil(ctx context.Context, serviceDetailOpt ServiceDetailOpt
 					service.ServiceId, service.Environment, service.AppId, service.ServiceName, service.Version)
 				return nil, err
 			}
+			// 作为consumer依赖的provider
 			providers, err := dr.GetDependencyProviders(
 				serviceUtil.WithoutSelfDependency(),
 				serviceUtil.WithSameDomainProject())
@@ -360,6 +377,7 @@ func getServiceDetailUtil(ctx context.Context, serviceDetailOpt ServiceDetailOpt
 	return serviceDetail, nil
 }
 
+// domainProject下的service以及instance的统计信息
 func statistics(ctx context.Context, withShared bool) (*pb.Statistics, error) {
 	result := &pb.Statistics{
 		Services:  &pb.StService{},
@@ -369,7 +387,7 @@ func statistics(ctx context.Context, withShared bool) (*pb.Statistics, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	opts := serviceUtil.FromContext(ctx)
 
-	// services
+	// services domainProject下的所有servicesId
 	key := apt.GetServiceIndexRootKey(domainProject) + "/"
 	svcOpts := append(opts,
 		registry.WithStrKey(key),
@@ -384,30 +402,39 @@ func statistics(ctx context.Context, withShared bool) (*pb.Statistics, error) {
 	svcIDToNonVerKey := make(map[string]string, respSvc.Count)
 	for _, kv := range respSvc.Kvs {
 		key := apt.GetInfoFromSvcIndexKV(kv.Key)
+		// 是否共享service  跳过共享service
 		if !withShared && apt.IsShared(key) {
 			continue
 		}
+
+		// 不同的appId
 		if _, ok := app[key.AppId]; !ok {
 			app[key.AppId] = struct{}{}
 		}
 
+		// 各个service的etcd中去掉version的key
 		key.Version = ""
 		svcWithNonVersionKey := apt.GenerateServiceIndexKey(key)
 		if _, ok := svcWithNonVersion[svcWithNonVersionKey]; !ok {
 			svcWithNonVersion[svcWithNonVersionKey] = struct{}{}
 		}
+
+		// serviceId => svcWithNonVersionKey
 		svcIDToNonVerKey[kv.Value.(string)] = svcWithNonVersionKey
 	}
 
+	// service总数
 	result.Services.Count = int64(len(svcWithNonVersion))
+	// app总数
 	result.Apps.Count = int64(len(app))
 
+	// domain下的instance总数  domain不同的project的service可以有相同的id
 	respGetInstanceCountByDomain := make(chan GetInstanceCountByDomainResponse, 1)
 	gopool.Go(func(_ context.Context) {
 		getInstanceCountByDomain(ctx, svcIDToNonVerKey, respGetInstanceCountByDomain)
 	})
 
-	// instance
+	// instance  domainProject下的instance
 	key = apt.GetInstanceRootKey(domainProject) + "/"
 	instOpts := append(opts,
 		registry.WithStrKey(key),
@@ -418,6 +445,7 @@ func statistics(ctx context.Context, withShared bool) (*pb.Statistics, error) {
 		return nil, err
 	}
 
+	// 具有instance的service
 	onlineServices := make(map[string]struct{}, respSvc.Count)
 	for _, kv := range respIns.Kvs {
 		serviceID, _, _ := apt.GetInfoFromInstKV(kv.Key)
@@ -430,6 +458,7 @@ func statistics(ctx context.Context, withShared bool) (*pb.Statistics, error) {
 			onlineServices[key] = struct{}{}
 		}
 	}
+	// 具有instance的service总数
 	result.Services.OnlineCount = int64(len(onlineServices))
 
 	data := <-respGetInstanceCountByDomain
@@ -437,6 +466,8 @@ func statistics(ctx context.Context, withShared bool) (*pb.Statistics, error) {
 	if data.err != nil {
 		return nil, data.err
 	}
+
+	//domain下的instance总数
 	result.Instances.CountByDomain = data.countByDomain
 	return result, nil
 }
@@ -446,9 +477,11 @@ type GetInstanceCountByDomainResponse struct {
 	countByDomain int64
 }
 
+// 获取domain下的指定serviceId的所有instance数量
 func getInstanceCountByDomain(ctx context.Context, svcIDToNonVerKey map[string]string, resp chan GetInstanceCountByDomainResponse) {
 	domainID := util.ParseDomain(ctx)
 	key := apt.GetInstanceRootKey(domainID) + "/"
+	// 获取domain下的所有instance
 	instOpts := append([]registry.PluginOpOption{},
 		registry.WithStrKey(key),
 		registry.WithPrefix(),
@@ -463,6 +496,7 @@ func getInstanceCountByDomain(ctx context.Context, svcIDToNonVerKey map[string]s
 	} else {
 		for _, kv := range respIns.Kvs {
 			serviceID, _, _ := apt.GetInfoFromInstKV(kv.Key)
+			// 是否指定的serviceId
 			_, ok := svcIDToNonVerKey[serviceID]
 			if !ok {
 				continue

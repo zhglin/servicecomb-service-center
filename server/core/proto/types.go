@@ -78,6 +78,7 @@ type ServerConfig struct {
 	CacheTTL time.Duration `json:"cacheTTL"`
 
 	// if want disable Test Schema, SchemaDisable set true
+	// 是否禁用修改schema功能
 	SchemaDisable bool `json:"schemaDisable"`
 }
 

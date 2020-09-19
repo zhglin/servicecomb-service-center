@@ -164,6 +164,7 @@ func (s *MicroServiceService) AddRule(ctx context.Context, in *pb.AddServiceRule
 	}, nil
 }
 
+// 修改指定rule
 func (s *MicroServiceService) UpdateRule(ctx context.Context, in *pb.UpdateServiceRuleRequest) (*pb.UpdateServiceRuleResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -202,6 +203,7 @@ func (s *MicroServiceService) UpdateRule(ctx context.Context, in *pb.UpdateServi
 		}, nil
 	}
 
+	// 校验ruleId是否存在
 	rule, err := serviceUtil.GetOneRule(ctx, domainProject, in.ServiceId, in.RuleId)
 	if err != nil {
 		log.Errorf(err, "update service rule[%s/%s] failed, query service rule failed, operator: %s",
@@ -313,6 +315,7 @@ func (s *MicroServiceService) GetRule(ctx context.Context, in *pb.GetServiceRule
 	}, nil
 }
 
+// 删除指定ruleId
 func (s *MicroServiceService) DeleteRule(ctx context.Context, in *pb.DeleteServiceRulesRequest) (*pb.DeleteServiceRulesResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -340,6 +343,7 @@ func (s *MicroServiceService) DeleteRule(ctx context.Context, in *pb.DeleteServi
 	for _, ruleID := range in.RuleIds {
 		key = apt.GenerateServiceRuleKey(domainProject, in.ServiceId, ruleID)
 		log.Debugf("start delete service rule file: %s", key)
+		// ruleId是否存在
 		data, err := serviceUtil.GetOneRule(ctx, domainProject, in.ServiceId, ruleID)
 		if err != nil {
 			log.Errorf(err, "delete service[%s] rules %v failed, get rule[%s] failed, operator: %s",
@@ -348,6 +352,7 @@ func (s *MicroServiceService) DeleteRule(ctx context.Context, in *pb.DeleteServi
 				Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
 			}, err
 		}
+		// 不存在就返回错误
 		if data == nil {
 			log.Errorf(nil, "delete service[%s] rules %v failed, rule[%s] does not exist, operator: %s",
 				in.ServiceId, in.RuleIds, ruleID, remoteIP)
@@ -356,6 +361,7 @@ func (s *MicroServiceService) DeleteRule(ctx context.Context, in *pb.DeleteServi
 			}, nil
 		}
 		indexKey = apt.GenerateRuleIndexKey(domainProject, in.ServiceId, data.Attribute, data.Pattern)
+		// 删除
 		opts = append(opts,
 			registry.OpDel(registry.WithStrKey(key)),
 			registry.OpDel(registry.WithStrKey(indexKey)))
@@ -368,6 +374,7 @@ func (s *MicroServiceService) DeleteRule(ctx context.Context, in *pb.DeleteServi
 		}, nil
 	}
 
+	// 保证serviceId版本不为0
 	resp, err := backend.BatchCommitWithCmp(ctx, opts,
 		[]registry.CompareOp{registry.OpCmp(
 			registry.CmpVer(util.StringToBytesWithNoCopy(apt.GenerateServiceKey(domainProject, in.ServiceId))),

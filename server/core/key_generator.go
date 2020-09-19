@@ -205,6 +205,7 @@ func GenerateServiceTagKey(domainProject string, serviceID string) string {
 	}, SPLIT)
 }
 
+//schemaKey /cse-sr/ms/schemas/{serviceId}/{schemaId} => pb.Schema{SchemaId:schemaID, Schema:schema}
 func GenerateServiceSchemaKey(domainProject string, serviceID string, schemaID string) string {
 	return util.StringJoin([]string{
 		GetServiceSchemaRootKey(domainProject),
@@ -213,6 +214,7 @@ func GenerateServiceSchemaKey(domainProject string, serviceID string, schemaID s
 	}, SPLIT)
 }
 
+//SummaryKey /cse-sr/ms/schema-sum/{domainProject}/{serviceId}/{schemaId} => Summary
 func GenerateServiceSchemaSummaryKey(domainProject string, serviceID string, schemaID string) string {
 	return util.StringJoin([]string{
 		GetServiceSchemaSummaryRootKey(domainProject),

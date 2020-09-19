@@ -310,6 +310,7 @@ func process(socket *WebSocket) {
 	socket.Stop()
 }
 
+// 写入失败信息
 func EstablishWebSocketError(conn *websocket.Conn, err error) {
 	remoteAddr := conn.RemoteAddr().String()
 	log.Errorf(err, "establish[%s] websocket watch failed.", remoteAddr)

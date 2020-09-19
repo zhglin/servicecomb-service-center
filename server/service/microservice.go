@@ -240,6 +240,7 @@ func checkQuota(ctx context.Context, domainProject string) *quota.ApplyQuotaResu
 	return rst
 }
 
+// 删除service
 func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID string, force bool) (*pb.Response, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	domainProject := util.ParseDomainProject(ctx)
@@ -256,6 +257,7 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 		return proto.CreateResponse(scerr.ErrInvalidParams, err.Error()), nil
 	}
 
+	// 是否存在
 	service, err := serviceUtil.GetService(ctx, domainProject, serviceID)
 	if err != nil {
 		log.Errorf(err, "%s micro-service[%s] failed, get service file failed, operator: %s",
@@ -278,12 +280,15 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 				serviceID, remoteIP)
 			return proto.CreateResponse(scerr.ErrInternal, err.Error()), err
 		}
+
+		// 有依赖关系不允许删除， 允许自己依赖自己
 		if l := len(services); l > 1 || (l == 1 && services[0] != serviceID) {
 			log.Errorf(nil, "delete micro-service[%s] failed, other services[%d] depend on it, operator: %s",
 				serviceID, l, remoteIP)
 			return proto.CreateResponse(scerr.ErrDependedOnConsumer, "Can not delete this service, other service rely it."), err
 		}
 
+		// 存在instance不允许删除
 		instancesKey := apt.GenerateInstanceKey(domainProject, serviceID, "")
 		rsp, err := backend.Store().Instance().Search(ctx,
 			registry.WithStrKey(instancesKey),
@@ -365,6 +370,7 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 		return proto.CreateResponse(scerr.ErrUnavailableBackend, err.Error()), err
 	}
 
+	// 保证service版本号不为0
 	resp, err := backend.Registry().TxnWithCmp(ctx, opts,
 		[]registry.CompareOp{registry.OpCmp(
 			registry.CmpVer(util.StringToBytesWithNoCopy(serviceIDKey)),
@@ -380,6 +386,7 @@ func (s *MicroServiceService) DeleteServicePri(ctx context.Context, serviceID st
 		return proto.CreateResponse(scerr.ErrServiceNotExists, "Service does not exist."), nil
 	}
 
+	// 删除quota
 	serviceUtil.RemandServiceQuota(ctx)
 
 	log.Infof("%s micro-service[%s] successfully, operator: %s", title, serviceID, remoteIP)
@@ -525,6 +532,7 @@ func (s *MicroServiceService) GetOne(ctx context.Context, in *pb.GetServiceReque
 	}, nil
 }
 
+// 获取domainProject下所有service
 func (s *MicroServiceService) GetServices(ctx context.Context, in *pb.GetServicesRequest) (*pb.GetServicesResponse, error) {
 	services, err := serviceUtil.GetAllServiceUtil(ctx)
 	if err != nil {
@@ -614,7 +622,7 @@ func (s *MicroServiceService) UpdateProperties(ctx context.Context, in *pb.Updat
 func (s *MicroServiceService) Exist(ctx context.Context, in *pb.GetExistenceRequest) (*pb.GetExistenceResponse, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	switch in.Type {
-	case ExistTypeMicroservice:
+	case ExistTypeMicroservice: //service是否存在
 		err := ExistenceReqValidator().Validate(in)
 		serviceFlag := util.StringJoin([]string{in.Environment, in.AppId, in.ServiceName, in.Version}, "/")
 		if err != nil {

@@ -120,6 +120,7 @@ func (s *MicroServiceService) Unregister(w http.ResponseWriter, r *http.Request)
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 获取domainProject下的所有service
 func (s *MicroServiceService) GetServices(w http.ResponseWriter, r *http.Request) {
 	request := &pb.GetServicesRequest{}
 	resp, _ := core.ServiceAPI.GetServices(r.Context(), request)
@@ -128,10 +129,11 @@ func (s *MicroServiceService) GetServices(w http.ResponseWriter, r *http.Request
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 校验service schemaId是否存在
 func (s *MicroServiceService) GetExistence(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	request := &pb.GetExistenceRequest{
-		Type:        query.Get("type"),
+		Type:        query.Get("type"), // service || schema
 		Environment: query.Get("env"),
 		AppId:       query.Get("appId"),
 		ServiceName: query.Get("serviceName"),
@@ -147,6 +149,7 @@ func (s *MicroServiceService) GetExistence(w http.ResponseWriter, r *http.Reques
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 获取指定serviceId的service信息
 func (s *MicroServiceService) GetServiceOne(w http.ResponseWriter, r *http.Request) {
 	request := &pb.GetServiceRequest{
 		ServiceId: r.URL.Query().Get(":serviceId"),
@@ -157,6 +160,7 @@ func (s *MicroServiceService) GetServiceOne(w http.ResponseWriter, r *http.Reque
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 批量注销service
 func (s *MicroServiceService) UnregisterServices(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {

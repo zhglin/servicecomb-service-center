@@ -44,6 +44,7 @@ func (s *TagService) URLPatterns() []rest.Route {
 	}
 }
 
+// 添加tag 不修改，不删除
 func (s *TagService) AddTags(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -51,7 +52,7 @@ func (s *TagService) AddTags(w http.ResponseWriter, r *http.Request) {
 		controller.WriteError(w, scerr.ErrInvalidParams, err.Error())
 		return
 	}
-	var tags map[string]map[string]string
+	var tags map[string]map[string]string // 参数 tags["tags"]map[string]string
 	err = json.Unmarshal(message, &tags)
 	if err != nil {
 		log.Errorf(err, "invalid json: %s", util.BytesToStringWithNoCopy(message))
@@ -71,6 +72,7 @@ func (s *TagService) AddTags(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 修改tag 只修改，不存在报错
 func (s *TagService) UpdateTag(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	resp, _ := core.ServiceAPI.UpdateTag(r.Context(), &pb.UpdateServiceTagRequest{
@@ -81,6 +83,7 @@ func (s *TagService) UpdateTag(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 获取tags
 func (s *TagService) GetTags(w http.ResponseWriter, r *http.Request) {
 	resp, _ := core.ServiceAPI.GetTags(r.Context(), &pb.GetServiceTagsRequest{
 		ServiceId: r.URL.Query().Get(":serviceId"),
@@ -90,6 +93,7 @@ func (s *TagService) GetTags(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 删除tags 不存在的报错
 func (s *TagService) DeleteTags(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	keys := query.Get(":key")

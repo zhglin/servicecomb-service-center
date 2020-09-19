@@ -75,6 +75,7 @@ func GetServiceFromCache(domainProject string, serviceID string) *pb.MicroServic
 	return svc
 }
 
+// domainProject下所有service
 func getServicesRawData(ctx context.Context, domainProject string) ([]*discovery.KeyValue, error) {
 	key := apt.GenerateServiceKey(domainProject, "")
 	opts := append(FromContext(ctx),
@@ -126,6 +127,7 @@ func GetAllServicesAcrossDomainProject(ctx context.Context) (map[string][]*pb.Mi
 	return services, nil
 }
 
+// 获取domainProject下所有service
 func GetServicesByDomainProject(ctx context.Context, domainProject string) ([]*pb.MicroService, error) {
 	kvs, err := getServicesRawData(ctx, domainProject)
 	if err != nil {
@@ -249,6 +251,7 @@ func ServiceExist(ctx context.Context, domainProject string, serviceID string) b
 	return true
 }
 
+// 获取指定domainProject下的service
 func GetAllServiceUtil(ctx context.Context) ([]*pb.MicroService, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	services, err := GetServicesByDomainProject(ctx, domainProject)
@@ -266,6 +269,7 @@ func RemandInstanceQuota(ctx context.Context) {
 	plugin.Plugins().Quota().RemandQuotas(ctx, quota.MicroServiceInstanceQuotaType)
 }
 
+// 修改service
 func UpdateService(domainProject string, serviceID string, service *pb.MicroService) (opt registry.PluginOp, err error) {
 	opt = registry.PluginOp{}
 	key := apt.GenerateServiceKey(domainProject, serviceID)

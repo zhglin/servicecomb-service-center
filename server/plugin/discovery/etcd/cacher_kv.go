@@ -141,7 +141,7 @@ func (c *KvCacher) doWatch(cfg ListWatchConfig) error {
 func (c *KvCacher) ListAndWatch(ctx context.Context) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
-	// 有panic，panic
+	// 忽略panic
 	defer log.Recover() // ensure ListAndWatch never raise panic
 
 	cfg := ListWatchConfig{

@@ -37,6 +37,16 @@ type MicroServiceInstanceService struct {
 	//
 }
 
+/*
+查询consumer下的provicer
+	FindInstances
+		InstancesAction（FindInstances，GetOneInstance的批量操作）
+		根据serviceId获取instance，不传consumerId就不会校验权限
+		GetOneInstance		非批量
+		GetInstances      	非批量
+
+*/
+
 func (s *MicroServiceInstanceService) URLPatterns() []rest.Route {
 	return []rest.Route{
 		{Method: rest.HTTPMethodGet, Path: "/v4/:project/registry/instances", Func: s.FindInstances},
@@ -52,7 +62,7 @@ func (s *MicroServiceInstanceService) URLPatterns() []rest.Route {
 	}
 }
 
-// 注册一个service实例
+// 注册一个instance
 func (s *MicroServiceInstanceService) RegisterInstance(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -95,6 +105,7 @@ func (s *MicroServiceInstanceService) Heartbeat(w http.ResponseWriter, r *http.R
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 批量heartbeat
 func (s *MicroServiceInstanceService) HeartbeatSet(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -132,7 +143,8 @@ func (s *MicroServiceInstanceService) UnregisterInstance(w http.ResponseWriter, 
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
-// consumer查找provider instance
+// consumer查找provider instance 同时会创建依赖关系
+// 参数是provider的appId serviceName Environment tags
 func (s *MicroServiceInstanceService) FindInstances(w http.ResponseWriter, r *http.Request) {
 	var ids []string
 	query := r.URL.Query()
@@ -166,6 +178,7 @@ func (s *MicroServiceInstanceService) FindInstances(w http.ResponseWriter, r *ht
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// FindInstances，GetOneInstance两个函数的批量操作
 func (s *MicroServiceInstanceService) InstancesAction(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -197,6 +210,7 @@ func (s *MicroServiceInstanceService) InstancesAction(w http.ResponseWriter, r *
 	}
 }
 
+// 获取consumer下的provider的instance  根据provider的serviceId 只返回一个instance
 func (s *MicroServiceInstanceService) GetOneInstance(w http.ResponseWriter, r *http.Request) {
 	var ids []string
 	query := r.URL.Query()
@@ -225,6 +239,7 @@ func (s *MicroServiceInstanceService) GetOneInstance(w http.ResponseWriter, r *h
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 根据serviceId直接获取instance 支持tag
 func (s *MicroServiceInstanceService) GetInstances(w http.ResponseWriter, r *http.Request) {
 	var ids []string
 	query := r.URL.Query()
@@ -251,6 +266,7 @@ func (s *MicroServiceInstanceService) GetInstances(w http.ResponseWriter, r *htt
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 修改instance的status
 func (s *MicroServiceInstanceService) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	status := query.Get("value")
@@ -263,6 +279,7 @@ func (s *MicroServiceInstanceService) UpdateStatus(w http.ResponseWriter, r *htt
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 修改instance的property
 func (s *MicroServiceInstanceService) UpdateMetadata(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	message, err := ioutil.ReadAll(r.Body)

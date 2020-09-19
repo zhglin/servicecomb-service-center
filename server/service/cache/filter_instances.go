@@ -32,6 +32,7 @@ import (
 
 var clustersIndex = make(map[string]int)
 
+// 集群配置
 func init() {
 	var clusters []string
 	for name := range registry.Configuration().Clusters {
@@ -43,10 +44,12 @@ func init() {
 	}
 }
 
+// 获取实例
 type InstancesFilter struct {
 }
 
 func (f *InstancesFilter) Name(ctx context.Context, _ *cache.Node) string {
+	// 指定provider的serviceId以及instanceId
 	instanceKey, ok := ctx.Value(CtxFindProviderInstance).(*pb.HeartbeatSetElement)
 	if ok {
 		return instanceKey.ServiceId + apt.SPLIT + instanceKey.InstanceId
@@ -55,7 +58,7 @@ func (f *InstancesFilter) Name(ctx context.Context, _ *cache.Node) string {
 }
 
 func (f *InstancesFilter) Init(ctx context.Context, parent *cache.Node) (node *cache.Node, err error) {
-	pCopy := *parent.Cache.Get(Find).(*VersionRuleCacheItem)
+	pCopy := *parent.Cache.Get(Find).(*VersionRuleCacheItem) // 复制
 
 	pCopy.Instances, pCopy.Rev, err = f.Find(ctx, parent)
 	if err != nil {
@@ -68,6 +71,7 @@ func (f *InstancesFilter) Init(ctx context.Context, parent *cache.Node) (node *c
 	return
 }
 
+// 获取provider instance
 func (f *InstancesFilter) Find(ctx context.Context, parent *cache.Node) (
 	instances []*pb.MicroServiceInstance, rev string, err error) {
 	pCache := parent.Cache.Get(Find).(*VersionRuleCacheItem)
@@ -115,6 +119,7 @@ func (f *InstancesFilter) findInstances(ctx context.Context, domainProject, serv
 	return
 }
 
+// 查询指定的provider instance
 func (f *InstancesFilter) FindInstances(ctx context.Context, domainProject string, instanceKey *pb.HeartbeatSetElement) (instances []*pb.MicroServiceInstance, rev string, err error) {
 	var (
 		maxRevs = make([]int64, len(clustersIndex))
@@ -127,6 +132,7 @@ func (f *InstancesFilter) FindInstances(ctx context.Context, domainProject strin
 	return instances, serviceUtil.FormatRevision(maxRevs, counts), nil
 }
 
+// 获取所有的provider instance
 func (f *InstancesFilter) BatchFindInstances(ctx context.Context, domainProject string, serviceIDs []string) (instances []*pb.MicroServiceInstance, rev string, err error) {
 	var (
 		maxRevs = make([]int64, len(clustersIndex))

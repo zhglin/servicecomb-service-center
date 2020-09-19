@@ -124,28 +124,33 @@ func GetAllProviderIds(ctx context.Context, domainProject string, service *pb.Mi
 	return providerIDs[:allowIdx], providerIDs[denyIdx:], nil
 }
 
+// 校验依赖记录是否存在
 func DependencyRuleExist(ctx context.Context, provider *pb.MicroServiceKey, consumer *pb.MicroServiceKey) (bool, error) {
 	targetDomainProject := provider.Tenant
 	if len(targetDomainProject) == 0 {
 		targetDomainProject = consumer.Tenant
 	}
 
+	// 校验consumer的依赖记录
 	consumerKey := apt.GenerateConsumerDependencyRuleKey(consumer.Tenant, consumer)
 	existed, err := dependencyRuleExistUtil(ctx, consumerKey, provider)
 	if err != nil || existed {
 		return existed, err
 	}
 
+	// 校验provider的依赖记录是否存在
 	providerKey := apt.GenerateProviderDependencyRuleKey(targetDomainProject, provider)
 	return dependencyRuleExistUtil(ctx, providerKey, consumer)
 }
 
+// 校验依赖关系是否存在
 func dependencyRuleExistUtil(ctx context.Context, key string, target *pb.MicroServiceKey) (bool, error) {
 	compareData, err := TransferToMicroServiceDependency(ctx, key)
 	if err != nil {
 		return false, err
 	}
 	if len(compareData.Dependency) != 0 {
+		// 校验MicroServiceKey是否存在
 		isEqual, err := containServiceDependency(compareData.Dependency, target)
 		if err != nil {
 			return false, err
@@ -158,8 +163,9 @@ func dependencyRuleExistUtil(ctx context.Context, key string, target *pb.MicroSe
 	return false, nil
 }
 
+// 添加依赖记录
 func AddServiceVersionRule(ctx context.Context, domainProject string, consumer *pb.MicroService, provider *pb.MicroServiceKey) error {
-	//创建依赖一致
+	//创建依赖一致   已存在直接返回
 	consumerKey := proto.MicroServiceToKey(domainProject, consumer)
 	exist, err := DependencyRuleExist(ctx, provider, consumerKey)
 	if exist || err != nil {
@@ -177,10 +183,11 @@ func AddServiceVersionRule(ctx context.Context, domainProject string, consumer *
 	}
 
 	id := util.StringJoin([]string{provider.AppId, provider.ServiceName}, "_")
+	// 不唯一的形式添加queueKey
 	key := apt.GenerateConsumerDependencyQueueKey(domainProject, consumer.ServiceId, id)
 	resp, err := backend.Registry().TxnWithCmp(ctx,
 		nil,
-		[]registry.CompareOp{registry.OpCmp(registry.CmpStrVal(key), registry.CmpEqual, util.BytesToStringWithNoCopy(data))},
+		[]registry.CompareOp{registry.OpCmp(registry.CmpStrVal(key), registry.CmpEqual, util.BytesToStringWithNoCopy(data))}, // 校验值相同
 		[]registry.PluginOp{registry.OpPut(registry.WithStrKey(key), registry.WithValue(data))})
 	if err != nil {
 		return err
@@ -193,7 +200,7 @@ func AddServiceVersionRule(ctx context.Context, domainProject string, consumer *
 	return nil
 }
 
-// 获取dependencyRule
+// 获取dependencyRule consumer和provider的key不同
 func TransferToMicroServiceDependency(ctx context.Context, key string) (*pb.MicroServiceDependency, error) {
 	microServiceDependency := &pb.MicroServiceDependency{
 		Dependency: []*pb.MicroServiceKey{},
@@ -421,7 +428,7 @@ func ParamsChecker(consumerInfo *pb.MicroServiceKey, providersInfo []*pb.MicroSe
 	return nil
 }
 
-// 删除service时删除依赖记录，通过发事件的方式删除consumer的依赖
+// 删除service时删除依赖记录，通过发事件的方式删除consumer的依赖(apt.DepsQueueUUID)
 func DeleteDependencyForDeleteService(domainProject string, serviceID string, service *pb.MicroServiceKey) (registry.PluginOp, error) {
 	key := apt.GenerateConsumerDependencyQueueKey(domainProject, serviceID, apt.DepsQueueUUID)
 	conDep := new(pb.ConsumerDependency)

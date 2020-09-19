@@ -22,6 +22,7 @@ import (
 	"github.com/apache/servicecomb-service-center/server/plugin/registry"
 )
 
+// 校验schema key是否存在
 func CheckSchemaInfoExist(ctx context.Context, key string) (bool, error) {
 	opts := append(FromContext(ctx), registry.WithStrKey(key), registry.WithCountOnly())
 	resp, errDo := backend.Store().Schema().Search(ctx, opts...)

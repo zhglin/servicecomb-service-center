@@ -46,6 +46,7 @@ type BatchFindResult struct {
 	Updated     []*FindResult       `protobuf:"bytes,3,rep,name=updated" json:"updated,omitempty"`
 }
 
+// 批量查询provider service
 type BatchFindInstancesRequest struct {
 	//consumer的id
 	ConsumerServiceId string          `protobuf:"bytes,1,opt,name=consumerServiceId" json:"consumerServiceId,omitempty"`

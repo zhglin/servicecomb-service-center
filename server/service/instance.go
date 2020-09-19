@@ -418,6 +418,7 @@ func getHeartbeatFunc(ctx context.Context, domainProject string, instancesHbRst 
 	}
 }
 
+// 只获取provider的一个instance
 func (s *InstanceService) GetOneInstance(ctx context.Context, in *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -430,6 +431,7 @@ func (s *InstanceService) GetOneInstance(ctx context.Context, in *pb.GetOneInsta
 	domainProject := util.ParseDomainProject(ctx)
 
 	service := &pb.MicroService{}
+	// 存在consumerServiceId，进行校验
 	if len(in.ConsumerServiceId) > 0 {
 		service, err = serviceUtil.GetService(ctx, domainProject, in.ConsumerServiceId)
 		if err != nil {
@@ -449,6 +451,7 @@ func (s *InstanceService) GetOneInstance(ctx context.Context, in *pb.GetOneInsta
 		}
 	}
 
+	// provider的service是否存在
 	provider, err := serviceUtil.GetService(ctx, domainProject, in.ProviderServiceId)
 	if err != nil {
 		log.Errorf(err, "get provider failed, consumer[%s] find provider instance[%s/%s]",
@@ -475,6 +478,7 @@ func (s *InstanceService) GetOneInstance(ctx context.Context, in *pb.GetOneInsta
 
 	var item *cache.VersionRuleCacheItem
 	rev, _ := ctx.Value(util.CtxRequestRevision).(string)
+	// 获取指定serviceId，instanceId的instanceId
 	item, err = cache.FindInstances.GetWithProviderID(ctx, service, proto.MicroServiceToKey(domainProject, provider),
 		&pb.HeartbeatSetElement{
 			ServiceId: in.ProviderServiceId, InstanceId: in.ProviderInstanceId,
@@ -505,6 +509,7 @@ func (s *InstanceService) GetOneInstance(ctx context.Context, in *pb.GetOneInsta
 	}, nil
 }
 
+// 根据serviceId获取
 func (s *InstanceService) GetInstances(ctx context.Context, in *pb.GetInstancesRequest) (*pb.GetInstancesResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -628,7 +633,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 
 	var findFlag func() string
 	provider := &pb.MicroServiceKey{
-		Tenant:      util.ParseTargetDomainProject(ctx),
+		Tenant:      util.ParseTargetDomainProject(ctx), // 始终都是consumer的并没有改掉
 		Environment: service.Environment,
 		AppId:       in.AppId,
 		ServiceName: in.ServiceName,
@@ -660,7 +665,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 		}
 	}
 
-	// cache
+	// cache  获取provide的instance
 	var item *cache.VersionRuleCacheItem
 	rev, _ := ctx.Value(util.CtxRequestRevision).(string)
 	item, err = cache.FindInstances.Get(ctx, service, provider, in.Tags, rev)
@@ -704,7 +709,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 	}
 
 	instances := item.Instances
-	if rev == item.Rev {
+	if rev == item.Rev {  //标识没有变更
 		instances = nil // for gRPC
 	}
 	// TODO support gRPC output context
@@ -756,7 +761,7 @@ func (s *InstanceService) BatchFind(ctx context.Context, in *pb.BatchFindInstanc
 	return response, nil
 }
 
-//批量查询provider
+//批量查询provider的services的instance
 func (s *InstanceService) batchFindServices(ctx context.Context, in *pb.BatchFindInstancesRequest) (*pb.BatchFindResult, error) {
 	if len(in.Services) == 0 {
 		return nil, nil
@@ -767,6 +772,7 @@ func (s *InstanceService) batchFindServices(ctx context.Context, in *pb.BatchFin
 	failedResult := make(map[int32]*pb.FindFailedResult)
 	for index, key := range in.Services {
 		findCtx := util.SetContext(cloneCtx, util.CtxRequestRevision, key.Rev)
+		// 依次find
 		resp, err := s.Find(findCtx, &pb.FindInstancesRequest{
 			ConsumerServiceId: in.ConsumerServiceId,
 			AppId:             key.Service.AppId,
@@ -774,22 +780,27 @@ func (s *InstanceService) batchFindServices(ctx context.Context, in *pb.BatchFin
 			VersionRule:       key.Service.Version,
 			Environment:       key.Service.Environment,
 		})
+		// etce的查询错误
 		if err != nil {
 			return nil, err
 		}
 		failed, ok := failedResult[resp.Response.GetCode()]
+		// 合并并区分查询结果
 		serviceUtil.AppendFindResponse(findCtx, int64(index), resp.Response, resp.Instances,
 			&services.Updated, &services.NotModified, &failed)
+		// 表示appendFindResponse函数里创建的failed
 		if !ok && failed != nil {
 			failedResult[resp.Response.GetCode()] = failed
 		}
 	}
+	// 合并失败的
 	for _, result := range failedResult {
 		services.Failed = append(services.Failed, result)
 	}
 	return services, nil
 }
 
+// 批量查询provider的instance  GetOneInstance
 func (s *InstanceService) batchFindInstances(ctx context.Context, in *pb.BatchFindInstancesRequest) (*pb.BatchFindResult, error) {
 	if len(in.Instances) == 0 {
 		return nil, nil
@@ -823,6 +834,7 @@ func (s *InstanceService) batchFindInstances(ctx context.Context, in *pb.BatchFi
 	return instances, nil
 }
 
+// 根据provide的id 转成MicroServiceKey
 func (s *InstanceService) reshapeProviderKey(ctx context.Context, provider *pb.MicroServiceKey, providerID string) (*pb.MicroServiceKey, error) {
 	//维护version的规则,service name 可能是别名，所以重新获取
 	providerService, err := serviceUtil.GetService(ctx, provider.Tenant, providerID)
@@ -836,6 +848,7 @@ func (s *InstanceService) reshapeProviderKey(ctx context.Context, provider *pb.M
 	return provider, nil
 }
 
+// 修改instance的status状态
 func (s *InstanceService) UpdateStatus(ctx context.Context, in *pb.UpdateInstanceStatusRequest) (*pb.UpdateInstanceStatusResponse, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	updateStatusFlag := util.StringJoin([]string{in.ServiceId, in.InstanceId, in.Status}, "/")
@@ -880,6 +893,7 @@ func (s *InstanceService) UpdateStatus(ctx context.Context, in *pb.UpdateInstanc
 	}, nil
 }
 
+// 修改instance的property
 func (s *InstanceService) UpdateInstanceProperties(ctx context.Context, in *pb.UpdateInstancePropsRequest) (*pb.UpdateInstancePropsResponse, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	instanceFlag := util.StringJoin([]string{in.ServiceId, in.InstanceId}, "/")
@@ -924,7 +938,7 @@ func (s *InstanceService) UpdateInstanceProperties(ctx context.Context, in *pb.U
 	}, nil
 }
 
-// 获取此service center对应的集群下的所有instance
+// 获取此service center对应的集群下的所有正常的instance
 func (s *InstanceService) ClusterHealth(ctx context.Context) (*pb.GetInstancesResponse, error) {
 	// 校验此service center节点是否正常
 	if err := health.GlobalHealthChecker().Healthy(); err != nil {

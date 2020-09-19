@@ -29,6 +29,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// 校验service是否存在
 func (s *InstanceService) WatchPreOpera(ctx context.Context, in *pb.WatchInstanceRequest) error {
 	if in == nil || len(in.SelfServiceId) == 0 {
 		return errors.New("request format invalid")

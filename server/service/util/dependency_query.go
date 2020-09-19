@@ -388,12 +388,12 @@ func (dr *DependencyRelation) getConsumerOfSameServiceNameAndAppID(provider *pb.
 	return allConsumers, nil
 }
 
-// provider的被依赖关系
+// provider的被依赖关系key
 func NewProviderDependencyRelation(ctx context.Context, domainProject string, provider *pb.MicroService) *DependencyRelation {
 	return NewDependencyRelation(ctx, domainProject, nil, provider)
 }
 
-// consumer的依赖关系
+// consumer的依赖关系key
 func NewConsumerDependencyRelation(ctx context.Context, domainProject string, consumer *pb.MicroService) *DependencyRelation {
 	return NewDependencyRelation(ctx, domainProject, consumer, nil)
 }

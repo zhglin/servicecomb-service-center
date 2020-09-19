@@ -115,7 +115,7 @@ func (governService *ResourceV4) GetGraph(w http.ResponseWriter, r *http.Request
 	controller.WriteResponse(w, nil, graph)
 }
 
-// GetServiceDetail 查询服务详细信息
+// GetServiceDetail 查询指定id的服务详细信息
 func (governService *ResourceV4) GetServiceDetail(w http.ResponseWriter, r *http.Request) {
 	serviceID := r.URL.Query().Get(":serviceId")
 	request := &pb.GetServiceRequest{
@@ -129,15 +129,16 @@ func (governService *ResourceV4) GetServiceDetail(w http.ResponseWriter, r *http
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 批量查询service信息
 func (governService *ResourceV4) GetAllServicesInfo(w http.ResponseWriter, r *http.Request) {
 	request := &pb.GetServicesInfoRequest{}
 	ctx := r.Context()
 	query := r.URL.Query()
 	optsStr := query.Get("options")
 	request.Options = strings.Split(optsStr, ",")
-	request.AppId = query.Get("appId")
-	request.ServiceName = query.Get("serviceName")
-	request.WithShared = util.StringTRUE(query.Get("withShared"))
+	request.AppId = query.Get("appId")  // 指定的appId
+	request.ServiceName = query.Get("serviceName") // appId对应的serviceName
+	request.WithShared = util.StringTRUE(query.Get("withShared")) // 是否查询共享service
 	countOnly := query.Get("countOnly")
 	if countOnly != "0" && countOnly != "1" && strings.TrimSpace(countOnly) != "" {
 		controller.WriteError(w, scerr.ErrInvalidParams, "parameter countOnly must be 1 or 0")

@@ -43,6 +43,7 @@ func (s *SchemaService) URLPatterns() []rest.Route {
 		{Method: rest.HTTPMethodGet, Path: "/v4/:project/registry/microservices/:serviceId/schemas", Func: s.GetAllSchemas},
 	}
 
+	// 同地址不同接口
 	if !core.ServerInfo.Config.SchemaDisable {
 		r = append(r, rest.Route{Method: rest.HTTPMethodPut, Path: "/v4/:project/registry/microservices/:serviceId/schemas/:schemaId", Func: s.ModifySchema})
 	} else {
@@ -52,11 +53,13 @@ func (s *SchemaService) URLPatterns() []rest.Route {
 	return r
 }
 
+// 禁用schema修改
 func (s *SchemaService) DisableSchema(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusForbidden)
 	_, _ = w.Write([]byte("schema modify is disabled"))
 }
 
+// 获取指定schemaId
 func (s *SchemaService) GetSchemas(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	request := &pb.GetSchemaRequest{
@@ -71,6 +74,7 @@ func (s *SchemaService) GetSchemas(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 修改指定schemaId
 func (s *SchemaService) ModifySchema(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -98,6 +102,7 @@ func (s *SchemaService) ModifySchema(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 添加 修改 删除 全量处理
 func (s *SchemaService) ModifySchemas(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -123,6 +128,7 @@ func (s *SchemaService) ModifySchemas(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 删除指定schemaId
 func (s *SchemaService) DeleteSchemas(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	request := &pb.DeleteSchemaRequest{
@@ -133,6 +139,7 @@ func (s *SchemaService) DeleteSchemas(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
+// 获取所有的schema
 func (s *SchemaService) GetAllSchemas(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	withSchema := query.Get("withSchema")
@@ -143,7 +150,7 @@ func (s *SchemaService) GetAllSchemas(w http.ResponseWriter, r *http.Request) {
 	}
 	request := &pb.GetAllSchemaRequest{
 		ServiceId:  serviceID,
-		WithSchema: withSchema == "1",
+		WithSchema: withSchema == "1",// 是否获取schema 否则 只获取summary
 	}
 	resp, _ := core.ServiceAPI.GetAllSchemaInfo(r.Context(), request)
 	respInternal := resp.Response

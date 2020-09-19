@@ -45,6 +45,7 @@ type DependencyRuleCache struct {
 	*cache.Tree
 }
 
+// 标记是否在etcd中是否有依赖记录
 func (f *DependencyRuleCache) ExistVersionRule(ctx context.Context, consumerID string, provider *pb.MicroServiceKey) bool {
 	cloneCtx := context.WithValue(context.WithValue(ctx,
 		CtxFindConsumer, consumerID),
@@ -54,9 +55,9 @@ func (f *DependencyRuleCache) ExistVersionRule(ctx context.Context, consumerID s
 	if node == nil {
 		return false
 	}
-	v := node.Cache.Get(Dep).(*DependencyRuleItem)
+	v := node.Cache.Get(Dep).(*DependencyRuleItem) // 引用
 	if v.VersionRule != provider.Version {
-		v.VersionRule = provider.Version
+		v.VersionRule = provider.Version // 修改version
 		return false
 	}
 	return true

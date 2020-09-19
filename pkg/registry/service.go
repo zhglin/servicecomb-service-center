@@ -28,6 +28,7 @@ type MicroService struct {
 	Version     string         `protobuf:"bytes,4,opt,name=version" json:"version,omitempty"`
 	Description string         `protobuf:"bytes,5,opt,name=description" json:"description,omitempty"`
 	Level       string         `protobuf:"bytes,6,opt,name=level" json:"level,omitempty"`
+	// schema的id，id不存在无法添加schema
 	Schemas     []string       `protobuf:"bytes,7,rep,name=schemas" json:"schemas,omitempty"`
 	Paths       []*ServicePath `protobuf:"bytes,10,rep,name=paths" json:"paths,omitempty"`
 	Status      string         `protobuf:"bytes,8,opt,name=status" json:"status,omitempty"`

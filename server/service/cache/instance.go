@@ -36,21 +36,22 @@ func init() {
 		&ServiceFilter{},     // 指定的provider信息  /Tenant/Environment/AppId/ServiceName
 		&VersionRuleFilter{}, // provider对应versionRule的serviceIds
 		&TagsFilter{},        // 符合tags的serviceIds
-		&AccessibleFilter{},  // 符合权限的serviceIds
-		&InstancesFilter{},
-		&ConsistencyFilter{},
+		&AccessibleFilter{},  // 符合权限的serviceIds 黑白名单
+		&InstancesFilter{},   // 查找instance
+		&ConsistencyFilter{}, // 修正
 	)
 }
 
 type VersionRuleCacheItem struct {
 	ServiceIds []string
 	Instances  []*pb.MicroServiceInstance
-	Rev        string
+	Rev        string  // 集群中的数据拼成的版本号，会返回给上游，上游下次请求带着进行校验
 
 	broken bool
 	queue  chan struct{}
 }
 
+// 标记是首次生成的
 func (vi *VersionRuleCacheItem) InitBrokenQueue() {
 	if vi.queue == nil {
 		vi.queue = make(chan struct{}, 1)
@@ -59,11 +60,13 @@ func (vi *VersionRuleCacheItem) InitBrokenQueue() {
 	vi.queue <- struct{}{}
 }
 
+// 修正过程锁等待
 func (vi *VersionRuleCacheItem) BrokenWait() bool {
 	<-vi.queue
 	return vi.broken
 }
 
+// 修成完关闭chain
 func (vi *VersionRuleCacheItem) Broken() {
 	vi.broken = true
 	close(vi.queue)
@@ -73,6 +76,7 @@ type FindInstancesCache struct {
 	*cache.Tree
 }
 
+// 获取所有provider的instance
 func (f *FindInstancesCache) Get(ctx context.Context, consumer *pb.MicroService, provider *pb.MicroServiceKey,
 	tags []string, rev string) (*VersionRuleCacheItem, error) {
 	cloneCtx := context.WithValue(context.WithValue(context.WithValue(context.WithValue(ctx,
@@ -88,6 +92,7 @@ func (f *FindInstancesCache) Get(ctx context.Context, consumer *pb.MicroService,
 	return node.Cache.Get(Find).(*VersionRuleCacheItem), nil
 }
 
+// 获取指定provider的instance
 func (f *FindInstancesCache) GetWithProviderID(ctx context.Context, consumer *pb.MicroService, provider *pb.MicroServiceKey,
 	instanceKey *pb.HeartbeatSetElement, tags []string, rev string) (*VersionRuleCacheItem, error) {
 	cloneCtx := context.WithValue(ctx, CtxFindProviderInstance, instanceKey)

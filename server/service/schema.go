@@ -37,6 +37,7 @@ import (
 	"context"
 )
 
+// 获取指定schemaId
 func (s *MicroServiceService) GetSchemaInfo(ctx context.Context, in *pb.GetSchemaRequest) (*pb.GetSchemaResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -48,6 +49,7 @@ func (s *MicroServiceService) GetSchemaInfo(ctx context.Context, in *pb.GetSchem
 
 	domainProject := util.ParseDomainProject(ctx)
 
+	// serviceId校验
 	if !serviceUtil.ServiceExist(ctx, domainProject, in.ServiceId) {
 		log.Errorf(nil, "get schema[%s/%s] failed, service does not exist", in.ServiceId, in.SchemaId)
 		return &pb.GetSchemaResponse{
@@ -55,6 +57,7 @@ func (s *MicroServiceService) GetSchemaInfo(ctx context.Context, in *pb.GetSchem
 		}, nil
 	}
 
+	// schemeId不存在
 	key := apt.GenerateServiceSchemaKey(domainProject, in.ServiceId, in.SchemaId)
 	opts := append(serviceUtil.FromContext(ctx), registry.WithStrKey(key))
 	resp, errDo := backend.Store().Schema().Search(ctx, opts...)
@@ -71,6 +74,7 @@ func (s *MicroServiceService) GetSchemaInfo(ctx context.Context, in *pb.GetSchem
 		}, nil
 	}
 
+	// summary
 	schemaSummary, err := getSchemaSummary(ctx, domainProject, in.ServiceId, in.SchemaId)
 	if err != nil {
 		log.Errorf(err, "get schema[%s/%s] failed, get schema summary failed", in.ServiceId, in.SchemaId)
@@ -86,6 +90,7 @@ func (s *MicroServiceService) GetSchemaInfo(ctx context.Context, in *pb.GetSchem
 	}, nil
 }
 
+// 获取所有的schema
 func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAllSchemaRequest) (*pb.GetAllSchemaResponse, error) {
 	err := Validate(in)
 	if err != nil {
@@ -97,6 +102,7 @@ func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAl
 
 	domainProject := util.ParseDomainProject(ctx)
 
+	// serviceId校验
 	service, err := serviceUtil.GetService(ctx, domainProject, in.ServiceId)
 	if err != nil {
 		log.Errorf(err, "get service[%s] all schemas failed, get service failed", in.ServiceId)
@@ -111,6 +117,7 @@ func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAl
 		}, nil
 	}
 
+	// 校验service.Schemas
 	schemasList := service.Schemas
 	if len(schemasList) == 0 {
 		return &pb.GetAllSchemaResponse{
@@ -119,6 +126,7 @@ func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAl
 		}, nil
 	}
 
+	// 获取所有的summary
 	key := apt.GenerateServiceSchemaSummaryKey(domainProject, in.ServiceId, "")
 	opts := append(serviceUtil.FromContext(ctx), registry.WithStrKey(key), registry.WithPrefix())
 	resp, errDo := backend.Store().SchemaSummary().Search(ctx, opts...)
@@ -130,7 +138,7 @@ func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAl
 	}
 
 	respWithSchema := &discovery.Response{}
-	if in.WithSchema {
+	if in.WithSchema { // 是否获取schema
 		key := apt.GenerateServiceSchemaKey(domainProject, in.ServiceId, "")
 		opts := append(serviceUtil.FromContext(ctx), registry.WithStrKey(key), registry.WithPrefix())
 		respWithSchema, errDo = backend.Store().Schema().Search(ctx, opts...)
@@ -143,10 +151,12 @@ func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAl
 	}
 
 	schemas := make([]*pb.Schema, 0, len(schemasList))
+	// 根据service.Schema拼数据
 	for _, schemaID := range schemasList {
 		tempSchema := &pb.Schema{}
 		tempSchema.SchemaId = schemaID
 		for _, summarySchema := range resp.Kvs {
+			// summary对应的schemaId
 			_, _, schemaIDOfSummary := apt.GetInfoFromSchemaSummaryKV(summarySchema.Key)
 			if schemaID == schemaIDOfSummary {
 				tempSchema.Summary = summarySchema.Value.(string)
@@ -154,6 +164,7 @@ func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAl
 		}
 
 		for _, contentSchema := range respWithSchema.Kvs {
+			// schema对应的schemaId
 			_, _, schemaIDOfSchema := apt.GetInfoFromSchemaKV(contentSchema.Key)
 			if schemaID == schemaIDOfSchema {
 				tempSchema.Schema = util.BytesToStringWithNoCopy(contentSchema.Value.([]byte))
@@ -169,6 +180,7 @@ func (s *MicroServiceService) GetAllSchemaInfo(ctx context.Context, in *pb.GetAl
 
 }
 
+// 删除指定schemaId
 func (s *MicroServiceService) DeleteSchema(ctx context.Context, in *pb.DeleteSchemaRequest) (*pb.DeleteSchemaResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -180,6 +192,7 @@ func (s *MicroServiceService) DeleteSchema(ctx context.Context, in *pb.DeleteSch
 	}
 	domainProject := util.ParseDomainProject(ctx)
 
+	// serviceId校验
 	if !serviceUtil.ServiceExist(ctx, domainProject, in.ServiceId) {
 		log.Errorf(nil, "delete schema[%s/%s] failed, service does not exist, operator: %s",
 			in.ServiceId, in.SchemaId, remoteIP)
@@ -188,6 +201,7 @@ func (s *MicroServiceService) DeleteSchema(ctx context.Context, in *pb.DeleteSch
 		}, nil
 	}
 
+	// 校验schemaId
 	key := apt.GenerateServiceSchemaKey(domainProject, in.ServiceId, in.SchemaId)
 	exist, err := serviceUtil.CheckSchemaInfoExist(ctx, key)
 	if err != nil {
@@ -203,12 +217,15 @@ func (s *MicroServiceService) DeleteSchema(ctx context.Context, in *pb.DeleteSch
 			Response: proto.CreateResponse(scerr.ErrSchemaNotExists, "Schema info does not exist."),
 		}, nil
 	}
+
+	// 删除
 	epSummaryKey := apt.GenerateServiceSchemaSummaryKey(domainProject, in.ServiceId, in.SchemaId)
 	opts := []registry.PluginOp{
 		registry.OpDel(registry.WithStrKey(epSummaryKey)),
 		registry.OpDel(registry.WithStrKey(key)),
 	}
 
+	// 确保service存在
 	resp, errDo := backend.Registry().TxnWithCmp(ctx, opts,
 		[]registry.CompareOp{registry.OpCmp(
 			registry.CmpVer(util.StringToBytesWithNoCopy(apt.GenerateServiceKey(domainProject, in.ServiceId))),
@@ -246,6 +263,7 @@ func (s *MicroServiceService) DeleteSchema(ctx context.Context, in *pb.DeleteSch
 // If the request contains a new schemaID,
 // the new schemaID will be automatically added to the service information.
 // Schema is allowed to add/delete/modify.
+// 添加，修改，删除 批量
 func (s *MicroServiceService) ModifySchemas(ctx context.Context, in *pb.ModifySchemasRequest) (*pb.ModifySchemasResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	err := Validate(in)
@@ -291,6 +309,8 @@ func (s *MicroServiceService) ModifySchemas(ctx context.Context, in *pb.ModifySc
 	}, nil
 }
 
+// schemas最新的 schemasFromDb已存在的  schemaIDsInService service中的
+// 过滤
 func schemasAnalysis(schemas []*pb.Schema, schemasFromDb []*pb.Schema, schemaIDsInService []string) (
 	[]*pb.Schema, []*pb.Schema, []*pb.Schema, []string) {
 	needUpdateSchemas := make([]*pb.Schema, 0, len(schemas))
@@ -306,6 +326,7 @@ func schemasAnalysis(schemas []*pb.Schema, schemasFromDb []*pb.Schema, schemaIDs
 		duplicate[schema.SchemaId] = struct{}{}
 
 		exist := false
+		// db中已存在 修改
 		for _, schemaFromDb := range schemasFromDb {
 			if schema.SchemaId == schemaFromDb.SchemaId {
 				needUpdateSchemas = append(needUpdateSchemas, schema)
@@ -313,6 +334,8 @@ func schemasAnalysis(schemas []*pb.Schema, schemasFromDb []*pb.Schema, schemaIDs
 				break
 			}
 		}
+
+		// db中不存在 添加
 		if !exist {
 			needAddSchemas = append(needAddSchemas, schema)
 		}
@@ -323,6 +346,8 @@ func schemasAnalysis(schemas []*pb.Schema, schemasFromDb []*pb.Schema, schemaIDs
 				exist = true
 			}
 		}
+
+		// service.schema中不存在
 		if !exist {
 			nonExistSchemaIds = append(nonExistSchemaIds, schema.SchemaId)
 		}
@@ -344,9 +369,11 @@ func schemasAnalysis(schemas []*pb.Schema, schemasFromDb []*pb.Schema, schemaIDs
 	return needUpdateSchemas, needAddSchemas, needDeleteSchemas, nonExistSchemaIds
 }
 
+// 操作schemas 每次按全部schema处理
 func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject string, service *pb.MicroService, schemas []*pb.Schema) *scerr.Error {
 	remoteIP := util.GetIPFromContext(ctx)
 	serviceID := service.ServiceId
+	// 获取所有的
 	schemasFromDatabase, err := GetSchemasFromDatabase(ctx, domainProject, serviceID)
 	if err != nil {
 		log.Errorf(nil, "modify service[%s] schemas failed, get schemas failed, operator: %s",
@@ -354,10 +381,12 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 		return scerr.NewError(scerr.ErrUnavailableBackend, err.Error())
 	}
 
+	// 修改的， 添加的，删除的，不存在的
 	needUpdateSchemas, needAddSchemas, needDeleteSchemas, nonExistSchemaIds := schemasAnalysis(schemas, schemasFromDatabase, service.Schemas)
 
 	pluginOps := make([]registry.PluginOp, 0)
 	if !s.isSchemaEditable(service) {
+		// service的schemas不存在
 		if len(service.Schemas) == 0 {
 			res := quota.NewApplyQuotaResource(quota.SchemaQuotaType, domainProject, serviceID, int64(len(nonExistSchemaIds)))
 			rst := plugin.Plugins().Quota().Apply4Quotas(ctx, res)
@@ -367,6 +396,7 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 				return errQuota
 			}
 
+			// 不支持schemas的修改，会把不存在的schemaId写到service的schemas中
 			service.Schemas = nonExistSchemaIds
 			opt, err := serviceUtil.UpdateService(domainProject, serviceID, service)
 			if err != nil {
@@ -376,20 +406,24 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 			}
 			pluginOps = append(pluginOps, opt)
 		} else {
+			// 存在service.schemaIds中不存在的id报错  支持已存在的schemaId添加 不支持修改
 			if len(nonExistSchemaIds) != 0 {
 				errInfo := fmt.Errorf("Non-existent schemaIDs %v", nonExistSchemaIds)
 				log.Errorf(errInfo, "modify service[%s] schemas failed, operator: %s", serviceID, remoteIP)
 				return scerr.NewError(scerr.ErrUndefinedSchemaID, errInfo.Error())
 			}
+			// service.SchemaId中有的不存在的schema可以添加
 			for _, needUpdateSchema := range needUpdateSchemas {
 				exist, err := isExistSchemaSummary(ctx, domainProject, serviceID, needUpdateSchema.SchemaId)
 				if err != nil {
 					return scerr.NewError(scerr.ErrInternal, err.Error())
 				}
 				if !exist {
+					// 不存在支持添加
 					opts := schemaWithDatabaseOpera(registry.OpPut, domainProject, serviceID, needUpdateSchema)
 					pluginOps = append(pluginOps, opts...)
 				} else {
+					// 已存在报错
 					log.Warnf("schema[%s/%s] and it's summary already exist, skip to update, operator: %s",
 						serviceID, needUpdateSchema.SchemaId, remoteIP)
 				}
@@ -414,6 +448,7 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 		}
 
 		var schemaIDs []string
+		// 添加
 		for _, schema := range needAddSchemas {
 			log.Infof("add new schema[%s/%s], operator: %s", serviceID, schema.SchemaId, remoteIP)
 			opts := schemaWithDatabaseOpera(registry.OpPut, domainProject, service.ServiceId, schema)
@@ -421,6 +456,7 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 			schemaIDs = append(schemaIDs, schema.SchemaId)
 		}
 
+		// 修改
 		for _, schema := range needUpdateSchemas {
 			log.Infof("update schema[%s/%s], operator: %s", serviceID, schema.SchemaId, remoteIP)
 			opts := schemaWithDatabaseOpera(registry.OpPut, domainProject, serviceID, schema)
@@ -428,12 +464,14 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 			schemaIDs = append(schemaIDs, schema.SchemaId)
 		}
 
+		// 删除
 		for _, schema := range needDeleteSchemas {
 			log.Infof("delete non-existent schema[%s/%s], operator: %s", serviceID, schema.SchemaId, remoteIP)
 			opts := schemaWithDatabaseOpera(registry.OpDel, domainProject, serviceID, schema)
 			pluginOps = append(pluginOps, opts...)
 		}
 
+		// 设置service.schemas
 		service.Schemas = schemaIDs
 		opt, err := serviceUtil.UpdateService(domainProject, serviceID, service)
 		if err != nil {
@@ -444,6 +482,7 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 		pluginOps = append(pluginOps, opt)
 	}
 
+	// 写入etcd 确保service已存在
 	if len(pluginOps) != 0 {
 		resp, err := backend.BatchCommitWithCmp(ctx, pluginOps,
 			[]registry.CompareOp{registry.OpCmp(
@@ -460,10 +499,12 @@ func (s *MicroServiceService) modifySchemas(ctx context.Context, domainProject s
 	return nil
 }
 
+// 是否允许编辑schema 非生产环境 || service开启编辑功能
 func (s *MicroServiceService) isSchemaEditable(service *pb.MicroService) bool {
 	return (len(service.Environment) != 0 && service.Environment != pb.ENV_PROD) || s.schemaEditable
 }
 
+// schemasId是否在service.schemas中
 func isExistSchemaID(service *pb.MicroService, schemas []*pb.Schema) bool {
 	serviceSchemaIds := service.Schemas
 	for _, schema := range schemas {
@@ -475,17 +516,21 @@ func isExistSchemaID(service *pb.MicroService, schemas []*pb.Schema) bool {
 	return true
 }
 
+// 添加schema
 func schemaWithDatabaseOpera(invoke registry.Operation, domainProject string, serviceID string, schema *pb.Schema) []registry.PluginOp {
 	pluginOps := make([]registry.PluginOp, 0)
+	// schema value
 	key := apt.GenerateServiceSchemaKey(domainProject, serviceID, schema.SchemaId)
 	opt := invoke(registry.WithStrKey(key), registry.WithStrValue(schema.Schema))
 	pluginOps = append(pluginOps, opt)
+	// schema key
 	keySummary := apt.GenerateServiceSchemaSummaryKey(domainProject, serviceID, schema.SchemaId)
 	opt = invoke(registry.WithStrKey(keySummary), registry.WithStrValue(schema.Summary))
 	pluginOps = append(pluginOps, opt)
 	return pluginOps
 }
 
+// 获取所有schema
 func GetSchemasFromDatabase(ctx context.Context, domainProject string, serviceID string) ([]*pb.Schema, error) {
 	key := apt.GenerateServiceSchemaKey(domainProject, serviceID, "")
 	resp, err := backend.Store().Schema().Search(ctx,
@@ -520,9 +565,11 @@ func GetSchemasFromDatabase(ctx context.Context, domainProject string, serviceID
 // If the request contains a new schemaID,
 // the new schemaID will be automatically added to the service information.
 // Schema is allowed to add/modify.
+// 修改指定schema
 func (s *MicroServiceService) ModifySchema(ctx context.Context, request *pb.ModifySchemaRequest) (*pb.ModifySchemaResponse, error) {
 	remoteIP := util.GetIPFromContext(ctx)
 	domainProject := util.ParseDomainProject(ctx)
+	// 能否修改
 	respErr := s.canModifySchema(ctx, domainProject, request)
 	if respErr != nil {
 		resp := &pb.ModifySchemaResponse{
@@ -560,6 +607,7 @@ func (s *MicroServiceService) ModifySchema(ctx context.Context, request *pb.Modi
 	}, nil
 }
 
+// 能否能修改schema
 func (s *MicroServiceService) canModifySchema(ctx context.Context, domainProject string, in *pb.ModifySchemaRequest) *scerr.Error {
 	remoteIP := util.GetIPFromContext(ctx)
 	serviceID := in.ServiceId
@@ -575,6 +623,7 @@ func (s *MicroServiceService) canModifySchema(ctx context.Context, domainProject
 		return scerr.NewError(scerr.ErrInvalidParams, err.Error())
 	}
 
+	//
 	res := quota.NewApplyQuotaResource(quota.SchemaQuotaType, domainProject, serviceID, 1)
 	rst := plugin.Plugins().Quota().Apply4Quotas(ctx, res)
 	errQuota := rst.Err
@@ -582,17 +631,21 @@ func (s *MicroServiceService) canModifySchema(ctx context.Context, domainProject
 		log.Errorf(errQuota, "update schema[%s/%s] failed, operator: %s", serviceID, schemaID, remoteIP)
 		return errQuota
 	}
+
+	//
 	if len(in.Summary) == 0 {
 		log.Warnf("schema[%s/%s]'s summary is empty, operator: %s", serviceID, schemaID, remoteIP)
 	}
 	return nil
 }
 
+// 修改一个schema
 func (s *MicroServiceService) modifySchema(ctx context.Context, serviceID string, schema *pb.Schema) *scerr.Error {
 	remoteIP := util.GetIPFromContext(ctx)
 	domainProject := util.ParseDomainProject(ctx)
 	schemaID := schema.SchemaId
 
+	// service校验
 	service, err := serviceUtil.GetService(ctx, domainProject, serviceID)
 	if err != nil {
 		log.Errorf(err, "modify schema[%s/%s] failed, get service failed, operator: %s",
@@ -606,13 +659,17 @@ func (s *MicroServiceService) modifySchema(ctx context.Context, serviceID string
 	}
 
 	var pluginOps []registry.PluginOp
+	// 是否存在service.schemas中
 	isExist := isExistSchemaID(service, []*pb.Schema{schema})
 
+	// 不支持修改 只允许添加
 	if !s.isSchemaEditable(service) {
+		// 不在service.Schemas中
 		if len(service.Schemas) != 0 && !isExist {
 			return scerr.NewError(scerr.ErrUndefinedSchemaID, "Non-existent schemaID can't be added in "+pb.ENV_PROD)
 		}
 
+		// schemaId是否已存在
 		key := apt.GenerateServiceSchemaKey(domainProject, serviceID, schemaID)
 		respSchema, err := backend.Store().Schema().Search(ctx, registry.WithStrKey(key), registry.WithCountOnly())
 		if err != nil {
@@ -621,7 +678,9 @@ func (s *MicroServiceService) modifySchema(ctx context.Context, serviceID string
 			return scerr.NewError(scerr.ErrUnavailableBackend, err.Error())
 		}
 
+		// 已存在
 		if respSchema.Count != 0 {
+			// 校验schema对应的summary
 			if len(schema.Summary) == 0 {
 				log.Errorf(err, "%s mode, schema[%s/%s] already exists, can not be changed, operator: %s",
 					pb.ENV_PROD, serviceID, schemaID, remoteIP)
@@ -641,6 +700,7 @@ func (s *MicroServiceService) modifySchema(ctx context.Context, serviceID string
 			}
 		}
 
+		//
 		if len(service.Schemas) == 0 {
 			service.Schemas = append(service.Schemas, schemaID)
 			opt, err := serviceUtil.UpdateService(domainProject, serviceID, service)
@@ -681,6 +741,7 @@ func (s *MicroServiceService) modifySchema(ctx context.Context, serviceID string
 	return nil
 }
 
+// schemaId是否存在 summary
 func isExistSchemaSummary(ctx context.Context, domainProject, serviceID, schemaID string) (bool, error) {
 	key := apt.GenerateServiceSchemaSummaryKey(domainProject, serviceID, schemaID)
 	resp, err := backend.Store().SchemaSummary().Search(ctx, registry.WithStrKey(key), registry.WithCountOnly())

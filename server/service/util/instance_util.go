@@ -66,6 +66,7 @@ func GetInstance(ctx context.Context, domainProject string, serviceID string, in
 	return resp.Kvs[0].Value.(*pb.MicroServiceInstance), nil
 }
 
+// 构建签名
 func FormatRevision(revs, counts []int64) (s string) {
 	for i, rev := range revs {
 		s += fmt.Sprintf("%d.%d,", rev, counts[i])
@@ -73,6 +74,7 @@ func FormatRevision(revs, counts []int64) (s string) {
 	return fmt.Sprintf("%x", sha1.Sum(util.StringToBytesWithNoCopy(s)))
 }
 
+// 获取serviceId下的所有instance
 func GetAllInstancesOfOneService(ctx context.Context, domainProject string, serviceID string) ([]*pb.MicroServiceInstance, error) {
 	key := apt.GenerateInstanceKey(domainProject, serviceID, "")
 	opts := append(FromContext(ctx), registry.WithStrKey(key), registry.WithPrefix())
@@ -89,6 +91,7 @@ func GetAllInstancesOfOneService(ctx context.Context, domainProject string, serv
 	return instances, nil
 }
 
+// 获取指定serviceId的instance数量
 func GetInstanceCountOfOneService(ctx context.Context, domainProject string, serviceID string) (int64, error) {
 	key := apt.GenerateInstanceKey(domainProject, serviceID, "")
 	opts := append(FromContext(ctx),
@@ -117,6 +120,7 @@ func ParseEndpointIndexValue(value []byte) EndpointIndexValue {
 	return endpointValue
 }
 
+// 删除etcd中lease
 func DeleteServiceAllInstances(ctx context.Context, serviceID string) error {
 	domainProject := util.ParseDomainProject(ctx)
 
@@ -215,7 +219,9 @@ func queryServiceInstancesKvs(ctx context.Context, serviceID string, rev int64) 
 	return resp.Kvs, nil
 }
 
+// 修改instance信息
 func UpdateInstance(ctx context.Context, domainProject string, instance *pb.MicroServiceInstance) *scerr.Error {
+	// instance已经不存在了
 	leaseID, err := GetLeaseID(ctx, domainProject, instance.ServiceId, instance.InstanceId)
 	if err != nil {
 		return scerr.NewError(scerr.ErrInternal, err.Error())
@@ -232,6 +238,7 @@ func UpdateInstance(ctx context.Context, domainProject string, instance *pb.Micr
 
 	key := apt.GenerateInstanceKey(domainProject, instance.ServiceId, instance.InstanceId)
 
+	// 确保service的版本号不为0
 	resp, err := backend.Registry().TxnWithCmp(ctx,
 		[]registry.PluginOp{registry.OpPut(
 			registry.WithStrKey(key),
@@ -250,9 +257,11 @@ func UpdateInstance(ctx context.Context, domainProject string, instance *pb.Micr
 	return nil
 }
 
+// 合并batchFind的查询结果
 func AppendFindResponse(ctx context.Context, index int64, resp *pb.Response, instances []*pb.MicroServiceInstance,
 	updatedResult *[]*pb.FindResult, notModifiedResult *[]int64, failedResult **pb.FindFailedResult) {
 	if code := resp.GetCode(); code != proto.Response_SUCCESS {
+		// 失败的
 		if *failedResult == nil {
 			*failedResult = &pb.FindFailedResult{
 				Error: scerr.NewError(code, resp.GetMessage()),
