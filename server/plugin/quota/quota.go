@@ -40,6 +40,7 @@ const (
 	MicroServiceInstanceQuotaType
 )
 
+// 各种资源类型对应的配额数
 var (
 	DefaultServiceQuota  = util.GetEnvInt("QUOTA_SERVICE", defaultServiceLimit)
 	DefaultInstanceQuota = util.GetEnvInt("QUOTA_INSTANCE", defaultInstanceLimit)
@@ -75,11 +76,12 @@ func NewApplyQuotaResult(reporter Reporter, err *scerr.Error) *ApplyQuotaResult 
 	}
 }
 
+// 资源申请参数
 type ApplyQuotaResource struct {
-	QuotaType     ResourceType
+	QuotaType     ResourceType //资源类型
 	DomainProject string
 	ServiceID     string
-	QuotaSize     int64
+	QuotaSize     int64 // 申请数量
 }
 
 func NewApplyQuotaResource(quotaType ResourceType, domainProject, serviceID string, quotaSize int64) *ApplyQuotaResource {
@@ -91,11 +93,13 @@ func NewApplyQuotaResource(quotaType ResourceType, domainProject, serviceID stri
 	}
 }
 
+// 资源申请接口
 type Manager interface {
-	Apply4Quotas(ctx context.Context, res *ApplyQuotaResource) *ApplyQuotaResult
+	Apply4Quotas(ctx context.Context, res *ApplyQuotaResource) *ApplyQuotaResult // 申请
 	RemandQuotas(ctx context.Context, quotaType ResourceType)
 }
 
+// 申请到的操作 上报使用
 type Reporter interface {
 	ReportUsedQuota(ctx context.Context) error
 	Close(ctx context.Context)

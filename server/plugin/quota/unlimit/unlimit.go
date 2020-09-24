@@ -25,6 +25,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
+// 不进行资源限制
 func init() {
 	mgr.RegisterPlugin(mgr.Plugin{PName: mgr.QUOTA, Name: "unlimit", New: New})
 

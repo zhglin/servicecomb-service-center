@@ -41,6 +41,7 @@ func (h *ServiceIndexEventHandler) Type() discovery.Type {
 	return backend.ServiceIndex
 }
 
+// 统计非sharedService数量 并标记sharedService
 func (h *ServiceIndexEventHandler) OnEvent(evt discovery.KvEvent) {
 	key := core.GetInfoFromSvcIndexKV(evt.KV.Key)
 	if core.IsShared(key) {
@@ -64,13 +65,14 @@ func NewServiceIndexEventHandler() *ServiceIndexEventHandler {
 // InstanceEventHandler counting the number of instances
 // Deprecated: Use metrics instead.
 type InstanceEventHandler struct {
-	SharedServiceIds map[string]struct{}
+	SharedServiceIds map[string]struct{} //标记sharedService
 }
 
 func (h *InstanceEventHandler) Type() discovery.Type {
 	return backend.INSTANCE
 }
 
+// 统计非shareService的Instance数量 标记shareService
 func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 	serviceID, _, domainProject := core.GetInfoFromInstKV(evt.KV.Key)
 	key := domainProject + core.SPLIT + serviceID
@@ -91,16 +93,18 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 				return
 			}
 		}
-		GetCounters().OnCreate(h.Type(), domainProject)
+		GetCounters().OnCreate(h.Type(), domainProject) // 增加计数
 	case registry.EVT_DELETE:
-		GetCounters().OnDelete(h.Type(), domainProject)
+		GetCounters().OnDelete(h.Type(), domainProject) // 减少计数
 	}
 }
 
+// instance事件
 func NewInstanceEventHandler() *InstanceEventHandler {
 	return &InstanceEventHandler{SharedServiceIds: make(map[string]struct{})}
 }
 
+// 注册事件
 func RegisterCounterListener(pluginName string) {
 	if pluginName != beego.AppConfig.DefaultString("quota_plugin", "buildin") {
 		return

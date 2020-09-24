@@ -23,10 +23,12 @@ import (
 
 var globalCounter = &GlobalCounter{}
 
+// 注册
 func init() {
 	counter.RegisterCounter(globalCounter)
 }
 
+// 总的service instance
 type GlobalCounter struct {
 	ServiceCount  int64
 	InstanceCount int64

@@ -40,10 +40,11 @@ type Service struct {
 type ServiceDetailOpt struct {
 	domainProject string
 	service       *pb.MicroService
-	countOnly     bool     // 只获取instance数量
+	countOnly     bool // 只获取instance数量
 	options       []string
 }
 
+// 批量获取service信息
 func (governService *Service) GetServicesInfo(ctx context.Context, in *pb.GetServicesInfoRequest) (*pb.GetServicesInfoResponse, error) {
 	ctx = util.SetContext(ctx, util.CtxCacheOnly, "1") // 只读cache
 
@@ -195,6 +196,7 @@ func (governService *Service) GetServiceDetail(ctx context.Context, in *pb.GetSe
 	}, nil
 }
 
+// 获取指定env下的appId
 func (governService *Service) GetApplications(ctx context.Context, in *pb.GetAppsRequest) (*pb.GetAppsResponse, error) {
 	err := service.Validate(in)
 	if err != nil {

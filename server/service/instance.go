@@ -709,7 +709,7 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 	}
 
 	instances := item.Instances
-	if rev == item.Rev {  //标识没有变更
+	if rev == item.Rev { //标识没有变更
 		instances = nil // for gRPC
 	}
 	// TODO support gRPC output context

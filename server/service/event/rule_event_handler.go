@@ -31,6 +31,7 @@ import (
 	serviceUtil "github.com/apache/servicecomb-service-center/server/service/util"
 )
 
+// 异步通知rules变更
 type RulesChangedTask struct {
 	discovery.KvEvent
 
@@ -45,6 +46,7 @@ func (apt *RulesChangedTask) Key() string {
 	return apt.key
 }
 
+// 执行
 func (apt *RulesChangedTask) Do(ctx context.Context) error {
 	apt.err = apt.publish(ctx, apt.DomainProject, apt.ProviderID)
 	return apt.err
@@ -54,6 +56,7 @@ func (apt *RulesChangedTask) Err() error {
 	return apt.err
 }
 
+// 变更通知
 func (apt *RulesChangedTask) publish(ctx context.Context, domainProject, providerID string) error {
 	ctx = context.WithValue(context.WithValue(ctx,
 		util.CtxCacheOnly, "1"),
@@ -64,11 +67,13 @@ func (apt *RulesChangedTask) publish(ctx context.Context, domainProject, provide
 		log.Errorf(err, "get provider[%s] service file failed", providerID)
 		return err
 	}
+	// service已删除
 	if provider == nil {
 		log.Errorf(nil, "provider[%s] does not exist", providerID)
 		return fmt.Errorf("provider %s does not exist", providerID)
 	}
 
+	// 获取所有的consumerIds
 	consumerIds, err := serviceUtil.GetConsumerIds(ctx, domainProject, provider)
 	if err != nil {
 		log.Errorf(err, "get service[%s][%s/%s/%s/%s]'s consumerIds failed",
@@ -77,6 +82,7 @@ func (apt *RulesChangedTask) publish(ctx context.Context, domainProject, provide
 	}
 	providerKey := proto.MicroServiceToKey(domainProject, provider)
 
+	// 通知所有的consumerIds 没有区分黑白名单
 	PublishInstanceEvent(apt.KvEvent, domainProject, providerKey, consumerIds)
 	return nil
 }
@@ -93,6 +99,7 @@ func (h *RuleEventHandler) Type() discovery.Type {
 
 func (h *RuleEventHandler) OnEvent(evt discovery.KvEvent) {
 	action := evt.Type
+	// 跳过init
 	if action == pb.EVT_INIT {
 		return
 	}
@@ -105,6 +112,7 @@ func (h *RuleEventHandler) OnEvent(evt discovery.KvEvent) {
 	}
 	log.Infof("caught [%s] service rule[%s/%s] event", action, providerID, ruleID)
 
+	// 通知
 	err := task.GetService().Add(context.Background(),
 		NewRulesChangedAsyncTask(domainProject, providerID, evt))
 	if err != nil {
@@ -116,6 +124,7 @@ func NewRuleEventHandler() *RuleEventHandler {
 	return &RuleEventHandler{}
 }
 
+// 异步通知
 func NewRulesChangedAsyncTask(domainProject, providerID string, evt discovery.KvEvent) *RulesChangedTask {
 	evt.Type = pb.EVT_EXPIRE
 	return &RulesChangedTask{

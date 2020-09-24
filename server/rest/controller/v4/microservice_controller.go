@@ -100,7 +100,7 @@ func (s *MicroServiceService) Update(w http.ResponseWriter, r *http.Request) {
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
-// 注销service
+// 注销service  强制注销会删除tag，rules，dependency，instance会导致通知丢失
 func (s *MicroServiceService) Unregister(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	serviceID := query.Get(":serviceId")

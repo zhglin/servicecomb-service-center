@@ -25,13 +25,13 @@ type MicroService struct {
 	AppId       string `protobuf:"bytes,2,opt,name=appId" json:"appId,omitempty"`
 	ServiceName string `protobuf:"bytes,3,opt,name=serviceName" json:"serviceName,omitempty"`
 	// 版本号
-	Version     string         `protobuf:"bytes,4,opt,name=version" json:"version,omitempty"`
-	Description string         `protobuf:"bytes,5,opt,name=description" json:"description,omitempty"`
-	Level       string         `protobuf:"bytes,6,opt,name=level" json:"level,omitempty"`
+	Version     string `protobuf:"bytes,4,opt,name=version" json:"version,omitempty"`
+	Description string `protobuf:"bytes,5,opt,name=description" json:"description,omitempty"`
+	Level       string `protobuf:"bytes,6,opt,name=level" json:"level,omitempty"`
 	// schema的id，id不存在无法添加schema
-	Schemas     []string       `protobuf:"bytes,7,rep,name=schemas" json:"schemas,omitempty"`
-	Paths       []*ServicePath `protobuf:"bytes,10,rep,name=paths" json:"paths,omitempty"`
-	Status      string         `protobuf:"bytes,8,opt,name=status" json:"status,omitempty"`
+	Schemas []string       `protobuf:"bytes,7,rep,name=schemas" json:"schemas,omitempty"`
+	Paths   []*ServicePath `protobuf:"bytes,10,rep,name=paths" json:"paths,omitempty"`
+	Status  string         `protobuf:"bytes,8,opt,name=status" json:"status,omitempty"`
 	// 属性  key=PROP_ALLOW_CROSS_APP(如果此service可以被别的consumer依赖，必须设置为true)
 	Properties map[string]string `protobuf:"bytes,9,rep,name=properties" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// 注册时间

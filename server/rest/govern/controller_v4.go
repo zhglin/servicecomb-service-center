@@ -56,6 +56,7 @@ func (governService *ResourceV4) GetGraph(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	domainProject := util.ParseDomainProject(ctx)
 
+	// 获取domainProject下的所有的service
 	resp, err := core.ServiceAPI.GetServices(ctx, request)
 	if err != nil {
 		controller.WriteError(w, scerr.ErrInternal, err.Error())
@@ -83,6 +84,8 @@ func (governService *ResourceV4) GetGraph(w http.ResponseWriter, r *http.Request
 			SameDomain: true,
 			NoSelf:     true,
 		}
+
+		// 获取provider
 		proResp, err := core.ServiceAPI.GetConsumerDependencies(ctx, proRequest)
 		if err != nil {
 			log.Errorf(err, "get service[%s/%s/%s/%s]'s providers failed",
@@ -91,6 +94,7 @@ func (governService *ResourceV4) GetGraph(w http.ResponseWriter, r *http.Request
 			return
 		}
 
+		// 依赖关系
 		providers := proResp.Providers
 		lines := governService.genLinesFromNode(withShared, domainProject, node, providers)
 		graph.Lines = append(graph.Lines, lines...)
@@ -106,9 +110,12 @@ func (governService *ResourceV4) genLinesFromNode(withShared bool, domainProject
 			continue
 		}
 
+		// 自己依赖自己
 		if node.ID == child.ServiceId {
 			continue
 		}
+
+		// 是否共享
 		if governService.isSkipped(withShared, domainProject, child) {
 			continue
 		}
@@ -146,8 +153,8 @@ func (governService *ResourceV4) GetAllServicesInfo(w http.ResponseWriter, r *ht
 	query := r.URL.Query()
 	optsStr := query.Get("options")
 	request.Options = strings.Split(optsStr, ",")
-	request.AppId = query.Get("appId")  // 指定的appId
-	request.ServiceName = query.Get("serviceName") // appId对应的serviceName
+	request.AppId = query.Get("appId")                            // 指定的appId
+	request.ServiceName = query.Get("serviceName")                // appId对应的serviceName
 	request.WithShared = util.StringTRUE(query.Get("withShared")) // 是否查询共享service
 	countOnly := query.Get("countOnly")
 	if countOnly != "0" && countOnly != "1" && strings.TrimSpace(countOnly) != "" {
@@ -164,6 +171,7 @@ func (governService *ResourceV4) GetAllServicesInfo(w http.ResponseWriter, r *ht
 	controller.WriteResponse(w, respInternal, resp)
 }
 
+// 获取指定env下的appId
 func (governService *ResourceV4) GetAllApplications(w http.ResponseWriter, r *http.Request) {
 	request := &pb.GetAppsRequest{}
 	ctx := r.Context()

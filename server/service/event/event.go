@@ -21,12 +21,12 @@ import (
 )
 
 func init() {
-	discovery.AddEventHandler(NewDomainEventHandler())
-	discovery.AddEventHandler(NewServiceEventHandler())
-	discovery.AddEventHandler(NewInstanceEventHandler())
-	discovery.AddEventHandler(NewRuleEventHandler())
-	discovery.AddEventHandler(NewTagEventHandler())
-	discovery.AddEventHandler(NewDependencyEventHandler())
-	discovery.AddEventHandler(NewDependencyRuleEventHandler())
-	discovery.AddEventHandler(NewSchemaSummaryEventHandler())
+	discovery.AddEventHandler(NewDomainEventHandler())         // domain类型 监控
+	discovery.AddEventHandler(NewServiceEventHandler())        // service类型,监控,创建domain,project,删除本地cache
+	discovery.AddEventHandler(NewInstanceEventHandler())       // instance类型 通知
+	discovery.AddEventHandler(NewRuleEventHandler())           // rule类型 通知
+	discovery.AddEventHandler(NewTagEventHandler())            // tag类型 通知
+	discovery.AddEventHandler(NewDependencyEventHandler())     // dependency 生成dependencyRule
+	discovery.AddEventHandler(NewDependencyRuleEventHandler()) // dependencyRule  删除cache
+	discovery.AddEventHandler(NewSchemaSummaryEventHandler())  // summary类型 监控
 }

@@ -33,6 +33,7 @@ func (h *SchemaSummaryEventHandler) Type() discovery.Type {
 	return backend.SchemaSummary
 }
 
+// 监控
 func (h *SchemaSummaryEventHandler) OnEvent(evt discovery.KvEvent) {
 	action := evt.Type
 	switch action {

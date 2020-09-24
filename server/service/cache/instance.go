@@ -45,7 +45,7 @@ func init() {
 type VersionRuleCacheItem struct {
 	ServiceIds []string
 	Instances  []*pb.MicroServiceInstance
-	Rev        string  // 集群中的数据拼成的版本号，会返回给上游，上游下次请求带着进行校验
+	Rev        string // 集群中的数据拼成的版本号，会返回给上游，上游下次请求带着进行校验
 
 	broken bool
 	queue  chan struct{}

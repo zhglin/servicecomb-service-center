@@ -32,7 +32,7 @@ import (
 type TagsFilter struct {
 }
 
-// provider的别名
+// provider的tag
 func (f *TagsFilter) Name(ctx context.Context, _ *cache.Node) string {
 	tags, _ := ctx.Value(CtxFindTags).([]string)
 	sort.Strings(tags)
@@ -41,7 +41,7 @@ func (f *TagsFilter) Name(ctx context.Context, _ *cache.Node) string {
 
 func (f *TagsFilter) Init(ctx context.Context, parent *cache.Node) (node *cache.Node, err error) {
 	tags, _ := ctx.Value(CtxFindTags).([]string)
-	// 不存在别名, 此节点的cache直接用parent的cache
+	// 不存在tag, 此节点的cache直接用parent的cache
 	if len(tags) == 0 {
 		node = cache.NewNode()
 		node.Cache = parent.Cache

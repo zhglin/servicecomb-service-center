@@ -21,9 +21,10 @@ import (
 
 var counters = Counters{}
 
+// 计数器 按类型计数
 type Counter interface {
-	OnCreate(t discovery.Type, domainProject string)
-	OnDelete(t discovery.Type, domainProject string)
+	OnCreate(t discovery.Type, domainProject string) // 增加
+	OnDelete(t discovery.Type, domainProject string) // 减少
 }
 
 type Counters []Counter

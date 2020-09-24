@@ -71,7 +71,7 @@ func (f *ConsistencyFilter) Init(ctx context.Context, parent *cache.Node) (node 
 	cloneCtx := util.CloneContext(ctx)
 	cloneCtx = util.SetContext(cloneCtx, util.CtxNocache, "1") //不使用缓存进行获取
 	insts, _, err := f.Find(cloneCtx, parent)
-	if err != nil {  // 出现异常后的第一次跳过直接使用cache
+	if err != nil { // 出现异常后的第一次跳过直接使用cache
 		pCache.InitBrokenQueue()
 		return nil, err
 	}

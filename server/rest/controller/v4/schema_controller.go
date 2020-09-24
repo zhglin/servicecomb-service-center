@@ -150,7 +150,7 @@ func (s *SchemaService) GetAllSchemas(w http.ResponseWriter, r *http.Request) {
 	}
 	request := &pb.GetAllSchemaRequest{
 		ServiceId:  serviceID,
-		WithSchema: withSchema == "1",// 是否获取schema 否则 只获取summary
+		WithSchema: withSchema == "1", // 是否获取schema 否则 只获取summary
 	}
 	resp, _ := core.ServiceAPI.GetAllSchemaInfo(r.Context(), request)
 	respInternal := resp.Response

@@ -32,9 +32,10 @@ import (
 	serviceUtil "github.com/apache/servicecomb-service-center/server/service/util"
 )
 
-type GetCurUsedNum func(context.Context, *quota.ApplyQuotaResource) (int64, error)
-type GetLimitQuota func() int64
+type GetCurUsedNum func(context.Context, *quota.ApplyQuotaResource) (int64, error) // 已使用的数量
+type GetLimitQuota func() int64                                                    // 配置的配额数
 
+// 检查申请的数量是否满足
 func CommonQuotaCheck(ctx context.Context, res *quota.ApplyQuotaResource,
 	getLimitQuota GetLimitQuota, getCurUsedNum GetCurUsedNum) *quota.ApplyQuotaResult {
 	if res == nil || getLimitQuota == nil || getCurUsedNum == nil {
@@ -49,6 +50,8 @@ func CommonQuotaCheck(ctx context.Context, res *quota.ApplyQuotaResource,
 		log.Errorf(err, "%s quota check failed", res.QuotaType)
 		return quota.NewApplyQuotaResult(nil, scerr.NewError(scerr.ErrInternal, err.Error()))
 	}
+
+	// 已使用数量+申请数量 > 分配的数量
 	if curNum+res.QuotaSize > limitQuota {
 		mes := fmt.Sprintf("no quota to create %s, max num is %d, curNum is %d, apply num is %d",
 			res.QuotaType, limitQuota, curNum, res.QuotaSize)
@@ -58,6 +61,7 @@ func CommonQuotaCheck(ctx context.Context, res *quota.ApplyQuotaResource,
 	return quota.NewApplyQuotaResult(nil, nil)
 }
 
+// 不同类型对应的配额
 func resourceQuota(t quota.ResourceType) GetLimitQuota {
 	return func() int64 {
 		switch t {
@@ -77,6 +81,7 @@ func resourceQuota(t quota.ResourceType) GetLimitQuota {
 	}
 }
 
+// 获取etcd中各个资源类型的总数量
 func resourceLimitHandler(ctx context.Context, res *quota.ApplyQuotaResource) (int64, error) {
 	var key string
 	var indexer discovery.Indexer
@@ -115,6 +120,7 @@ func resourceLimitHandler(ctx context.Context, res *quota.ApplyQuotaResource) (i
 	return resp.Count, nil
 }
 
+// 设置quota组件的信息
 func InitConfigs() {
 	mgr.QUOTA.ActiveConfigs().
 		Set("service", quota.DefaultServiceQuota).

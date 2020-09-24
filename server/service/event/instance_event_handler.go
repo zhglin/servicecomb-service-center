@@ -62,7 +62,7 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 	switch action {
 	case pb.EVT_INIT:
 		metrics.ReportInstances(domainName, count)
-		// 本地cache不存在
+		// 本地cache不存在 先生成cache再处理event
 		ms := serviceUtil.GetServiceFromCache(domainProject, providerID)
 		if ms == nil {
 			log.Warnf("caught [%s] instance[%s/%s] event, endpoints %v, get cached provider's file failed",
@@ -86,13 +86,14 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 		}
 	}
 
+	// notify已关闭
 	if notify.GetNotifyCenter().Closed() {
 		log.Warnf("caught [%s] instance[%s/%s] event, endpoints %v, but notify service is closed",
 			action, providerID, providerInstanceID, instance.Endpoints)
 		return
 	}
 
-	// 查询服务版本信息
+	// 查询服务信息,本地cache不存在,强制删除service会导致instance删除,丢失通知
 	ctx := context.WithValue(context.WithValue(context.Background(),
 		util.CtxCacheOnly, "1"),
 		util.CtxGlobal, "1")
@@ -110,7 +111,7 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 		action, providerID, ms.Environment, ms.AppId, ms.ServiceName, ms.Version,
 		providerInstanceID, instance.Endpoints)
 
-	// 查询所有consumer
+	// 查询所有白名单的consumerId
 	consumerIDs, _, err := serviceUtil.GetAllConsumerIds(ctx, domainProject, ms)
 	if err != nil {
 		log.Errorf(err, "get service[%s][%s/%s/%s/%s]'s consumerIDs failed",
@@ -126,7 +127,9 @@ func NewInstanceEventHandler() *InstanceEventHandler {
 	return &InstanceEventHandler{}
 }
 
+// 通知
 func PublishInstanceEvent(evt discovery.KvEvent, domainProject string, serviceKey *pb.MicroServiceKey, subscribers []string) {
+	// 删除对应的cache
 	defer cache.FindInstances.Remove(serviceKey)
 
 	if len(subscribers) == 0 {

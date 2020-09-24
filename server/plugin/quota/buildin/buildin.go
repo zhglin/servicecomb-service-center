@@ -51,7 +51,7 @@ func (q *Quota) Apply4Quotas(ctx context.Context, res *quota.ApplyQuotaResource)
 	return CommonQuotaCheck(ctx, res, resourceQuota(res.QuotaType), resourceLimitHandler)
 }
 
-//向配额中心上报配额使用量
+//向配额中心上报配额使用量  没啥用 每次直接从etcd中取总数
 func (q *Quota) RemandQuotas(ctx context.Context, quotaType quota.ResourceType) {
 	df, ok := mgr.DynamicPluginFunc(mgr.QUOTA, "RemandQuotas").(func(context.Context, quota.ResourceType))
 	if ok {

@@ -32,8 +32,8 @@ import (
 	"strings"
 )
 
+// 查询所有consumerId
 func GetConsumerIds(ctx context.Context, domainProject string, provider *pb.MicroService) ([]string, error) {
-	// 查询所有consumer
 	dr := NewProviderDependencyRelation(ctx, domainProject, provider)
 	consumerIds, err := dr.GetDependencyConsumerIds()
 	if err != nil {
@@ -43,8 +43,8 @@ func GetConsumerIds(ctx context.Context, domainProject string, provider *pb.Micr
 	return consumerIds, nil
 }
 
+// 查询所有providerId
 func GetProviderIds(ctx context.Context, domainProject string, consumer *pb.MicroService) ([]string, error) {
-	// 查询所有provider
 	dr := NewConsumerDependencyRelation(ctx, domainProject, consumer)
 	providerIDs, err := dr.GetDependencyProviderIds()
 	if err != nil {
@@ -60,7 +60,7 @@ func GetAllConsumerIds(ctx context.Context, domainProject string, provider *pb.M
 		return nil, nil, fmt.Errorf("invalid provider")
 	}
 
-	//todo 删除服务，最后实例推送有误差
+	//todo 删除服务，最后实例推送有误差  删除服务会删除所有的rules
 	providerRules, err := GetRulesUtil(ctx, domainProject, provider.ServiceId)
 	if err != nil {
 		return nil, nil, err
@@ -78,7 +78,9 @@ func GetAllConsumerIds(ctx context.Context, domainProject string, provider *pb.M
 	return allow, deny, nil
 }
 
+// 返回provider对应的黑白名单的consumerId
 func getConsumerIdsWithFilter(ctx context.Context, domainProject string, provider *pb.MicroService, rf *RuleFilter) (allow []string, deny []string, err error) {
+	// provider的所有consumerId
 	consumerIds, err := GetConsumerIds(ctx, domainProject, provider)
 	if err != nil {
 		return nil, nil, err

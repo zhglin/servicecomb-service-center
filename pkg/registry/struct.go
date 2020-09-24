@@ -42,7 +42,7 @@ const (
 	EVT_CREATE types.EventType = "CREATE"
 	EVT_UPDATE types.EventType = "UPDATE"
 	EVT_DELETE types.EventType = "DELETE"
-	EVT_EXPIRE types.EventType = "EXPIRE"
+	EVT_EXPIRE types.EventType = "EXPIRE" // rules,tags 变更
 	EVT_ERROR  types.EventType = "ERROR"
 
 	CHECK_BY_HEARTBEAT string = "push"
@@ -55,7 +55,7 @@ type HeartbeatSetRequest struct {
 
 // 只传serviceId就会获取所有instanceId
 type HeartbeatSetElement struct {
-	ServiceId  string `protobuf:"bytes,1,opt,name=serviceId" json:"serviceId,omitempty"`
+	ServiceId string `protobuf:"bytes,1,opt,name=serviceId" json:"serviceId,omitempty"`
 	// service下的instance
 	InstanceId string `protobuf:"bytes,2,opt,name=instanceId" json:"instanceId,omitempty"`
 }
@@ -73,14 +73,14 @@ type InstanceHbRst struct {
 
 type StService struct {
 	// service的总数
-	Count       int64 `protobuf:"varint,1,opt,name=count" json:"count,omitempty"`
+	Count int64 `protobuf:"varint,1,opt,name=count" json:"count,omitempty"`
 	// 存在instance的service总数
 	OnlineCount int64 `protobuf:"varint,2,opt,name=onlineCount" json:"onlineCount,omitempty"`
 }
 
 type StInstance struct {
 	// domainProject下的instance总数
-	Count         int64 `protobuf:"varint,1,opt,name=count" json:"count,omitempty"`
+	Count int64 `protobuf:"varint,1,opt,name=count" json:"count,omitempty"`
 	// domain下的instance总数
 	CountByDomain int64 `protobuf:"varint,2,opt,name=countByDomain" json:"countByDomain,omitempty"`
 }
@@ -134,11 +134,11 @@ type ServiceRule struct {
 	// 使用MicroService的哪个key进行校验,如果是"tag_"开头代表使用service的tags,例tag_a即从tags取a的值
 	Attribute string `protobuf:"bytes,3,opt,name=attribute" json:"attribute,omitempty"`
 	// 正则表达式
-	Pattern      string `protobuf:"bytes,4,opt,name=pattern" json:"pattern,omitempty"`
+	Pattern string `protobuf:"bytes,4,opt,name=pattern" json:"pattern,omitempty"`
 	// 描述
-	Description  string `protobuf:"bytes,5,opt,name=description" json:"description,omitempty"`
+	Description string `protobuf:"bytes,5,opt,name=description" json:"description,omitempty"`
 	// 创建时间
-	Timestamp    string `protobuf:"bytes,6,opt,name=timestamp" json:"timestamp,omitempty"`
+	Timestamp string `protobuf:"bytes,6,opt,name=timestamp" json:"timestamp,omitempty"`
 	// 修改时间
 	ModTimestamp string `protobuf:"bytes,7,opt,name=modTimestamp" json:"modTimestamp,omitempty"`
 }

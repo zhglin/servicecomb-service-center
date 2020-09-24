@@ -37,6 +37,7 @@ type RuleFilter struct {
 	ProviderRules []*pb.ServiceRule
 }
 
+// consumerId 是否符合rule
 func (rf *RuleFilter) Filter(ctx context.Context, consumerID string) (bool, error) {
 	copyCtx := util.SetContext(util.CloneContext(ctx), util.CtxCacheOnly, "1")
 	consumer, err := GetService(copyCtx, rf.DomainProject, consumerID)
@@ -62,6 +63,7 @@ func (rf *RuleFilter) Filter(ctx context.Context, consumerID string) (bool, erro
 	return true, nil
 }
 
+// 根据黑白名单过滤consumer
 func (rf *RuleFilter) FilterAll(ctx context.Context, consumerIDs []string) (allow []string, deny []string, err error) {
 	l := len(consumerIDs)
 	if l == 0 || len(rf.ProviderRules) == 0 {
@@ -75,10 +77,10 @@ func (rf *RuleFilter) FilterAll(ctx context.Context, consumerIDs []string) (allo
 		if err != nil {
 			return nil, nil, err
 		}
-		if ok {
+		if ok { // 白名单
 			consumers[allowIdx] = consumerID
 			allowIdx++
-		} else {
+		} else { // 黑名单
 			denyIdx--
 			consumers[denyIdx] = consumerID
 		}

@@ -32,6 +32,7 @@ import (
 	serviceUtil "github.com/apache/servicecomb-service-center/server/service/util"
 )
 
+// 异步通知tags变更
 type TagsChangedTask struct {
 	discovery.KvEvent
 
@@ -70,9 +71,11 @@ func (apt *TagsChangedTask) publish(ctx context.Context, domainProject, consumer
 		return fmt.Errorf("consumer[%s] does not exist", consumerID)
 	}
 
+	// 删除作为provider的cache
 	serviceKey := proto.MicroServiceToKey(domainProject, consumer)
 	cache.FindInstances.Remove(serviceKey)
 
+	// 删除作为consumer的provider的cache
 	providerIDs, err := serviceUtil.GetProviderIds(ctx, domainProject, consumer)
 	if err != nil {
 		log.Errorf(err, "get service[%s][%s/%s/%s/%s]'s providerIDs failed",
@@ -89,6 +92,7 @@ func (apt *TagsChangedTask) publish(ctx context.Context, domainProject, consumer
 		}
 
 		providerKey := proto.MicroServiceToKey(domainProject, provider)
+		// 这里是删除provider的cache，通知的还是consumerId
 		PublishInstanceEvent(apt.KvEvent, domainProject, providerKey, []string{consumerID})
 	}
 	return nil
