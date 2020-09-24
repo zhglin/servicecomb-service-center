@@ -605,9 +605,36 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 			Response: proto.CreateResponse(scerr.ErrInvalidParams, err.Error()),
 		}, nil
 	}
-	//consumer的domainProject
+
+	provider := &pb.MicroServiceKey{
+		Tenant:      util.ParseTargetDomainProject(ctx), // consumer的tenant
+		Environment: in.Environment,
+		AppId:       in.AppId,
+		ServiceName: in.ServiceName,
+		Alias:       in.ServiceName,
+		Version:     in.VersionRule,
+	}
+
+	rev, ok := ctx.Value(util.CtxRequestRevision).(string)
+	if !ok {
+		err = errors.New("rev in context is not type string")
+		log.Error("", err)
+		return &pb.FindInstancesResponse{
+			Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
+		}, err
+	}
+
+	//共享的provider
+	if apt.IsShared(provider) {
+		return s.findSharedServiceInstance(ctx, in, provider, rev)
+	}
+	return s.findInstance(ctx, in, provider, rev)
+}
+
+func (s *InstanceService) findInstance(ctx context.Context, in *pb.FindInstancesRequest,
+	provider *pb.MicroServiceKey, rev string) (*pb.FindInstancesResponse, error) {
+	var err error
 	domainProject := util.ParseDomainProject(ctx)
-	//如果存在consumerService那么provider的Environment使用consumer的Environment
 	service := &pb.MicroService{Environment: in.Environment}
 	if len(in.ConsumerServiceId) > 0 {
 		//consumerServiceId对应的service是否存在判断
@@ -629,54 +656,29 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 					fmt.Sprintf("Consumer[%s] does not exist.", in.ConsumerServiceId)),
 			}, nil
 		}
+		provider.Environment = service.Environment
 	}
 
-	var findFlag func() string
-	provider := &pb.MicroServiceKey{
-		Tenant:      util.ParseTargetDomainProject(ctx), // 始终都是consumer的并没有改掉
-		Environment: service.Environment,
-		AppId:       in.AppId,
-		ServiceName: in.ServiceName,
-		Alias:       in.ServiceName,
-		Version:     in.VersionRule,
-	}
-	if apt.IsShared(provider) {
-		// it means the shared micro-services must be the same env with SC.
-		// 如果是共享的service Environment必须与此注册中心节点的Environment相同
-		provider.Environment = apt.Service.Environment
+	// provider is not a shared micro-service,
+	// only allow shared micro-service instances found in different domains.
+	ctx = util.SetTargetDomainProject(ctx, util.ParseDomain(ctx), util.ParseProject(ctx))
+	provider.Tenant = util.ParseTargetDomainProject(ctx)
 
-		findFlag = func() string {
-			return fmt.Sprintf("Consumer[%s][%s/%s/%s/%s] find shared provider[%s/%s/%s/%s]",
-				in.ConsumerServiceId, service.Environment, service.AppId, service.ServiceName, service.Version,
-				provider.Environment, provider.AppId, provider.ServiceName, provider.Version)
-		}
-	} else {
-		// provider is not a shared micro-service,
-		// only allow shared micro-service instances found in different domains.
-		// 只允许共享的service可以使用不同的domainProject
-		ctx = util.SetTargetDomainProject(ctx, util.ParseDomain(ctx), util.ParseProject(ctx))
-		// 强制把provider的tenant设置成consumer的tenant
-		provider.Tenant = util.ParseTargetDomainProject(ctx)
-
-		findFlag = func() string {
-			return fmt.Sprintf("Consumer[%s][%s/%s/%s/%s] find provider[%s/%s/%s/%s]",
-				in.ConsumerServiceId, service.Environment, service.AppId, service.ServiceName, service.Version,
-				provider.Environment, provider.AppId, provider.ServiceName, provider.Version)
-		}
-	}
+	findFlag := fmt.Sprintf("Consumer[%s][%s/%s/%s/%s] find provider[%s/%s/%s/%s]",
+		in.ConsumerServiceId, service.Environment, service.AppId, service.ServiceName, service.Version,
+		provider.Environment, provider.AppId, provider.ServiceName, provider.Version)
 
 	// cache  获取provide的instance
 	var item *cache.VersionRuleCacheItem
-	rev, _ := ctx.Value(util.CtxRequestRevision).(string)
 	item, err = cache.FindInstances.Get(ctx, service, provider, in.Tags, rev)
 	if err != nil {
-		log.Errorf(err, "FindInstancesCache.Get failed, %s failed", findFlag())
+		log.Errorf(err, "FindInstancesCache.Get failed, %s failed", findFlag)
 		return &pb.FindInstancesResponse{
 			Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
 		}, err
 	}
 	if item == nil {
-		mes := fmt.Errorf("%s failed, provider does not exist", findFlag())
+		mes := fmt.Errorf("%s failed, provider does not exist", findFlag)
 		log.Errorf(mes, "FindInstancesCache.Get failed")
 		return &pb.FindInstancesResponse{
 			Response: proto.CreateResponse(scerr.ErrServiceNotExists, mes.Error()),
@@ -694,22 +696,56 @@ func (s *InstanceService) Find(ctx context.Context, in *pb.FindInstancesRequest)
 		if provider != nil {
 			err = serviceUtil.AddServiceVersionRule(ctx, domainProject, service, provider)
 		} else {
-			mes := fmt.Errorf("%s failed, provider does not exist", findFlag())
+			mes := fmt.Errorf("%s failed, provider does not exist", findFlag)
 			log.Errorf(mes, "AddServiceVersionRule failed")
 			return &pb.FindInstancesResponse{
 				Response: proto.CreateResponse(scerr.ErrServiceNotExists, mes.Error()),
 			}, nil
 		}
 		if err != nil {
-			log.Errorf(err, "AddServiceVersionRule failed, %s failed", findFlag())
+			log.Errorf(err, "AddServiceVersionRule failed, %s failed", findFlag)
 			return &pb.FindInstancesResponse{
 				Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
 			}, err
 		}
 	}
 
+	return s.genFindResult(ctx, rev, item)
+}
+
+// 查找共享的service实例
+func (s *InstanceService) findSharedServiceInstance(ctx context.Context, in *pb.FindInstancesRequest,
+	provider *pb.MicroServiceKey, rev string) (*pb.FindInstancesResponse, error) {
+	var err error
+	service := &pb.MicroService{Environment: in.Environment}
+	// it means the shared micro-services must be the same env with SC.
+	// 如果是共享的service Environment必须与此注册中心节点的Environment相同
+	provider.Environment = apt.Service.Environment
+	findFlag := fmt.Sprintf("find shared provider[%s/%s/%s/%s]", provider.Environment, provider.AppId, provider.ServiceName, provider.Version)
+
+	// cache
+	var item *cache.VersionRuleCacheItem
+	item, err = cache.FindInstances.Get(ctx, service, provider, in.Tags, rev)
+	if err != nil {
+		log.Errorf(err, "FindInstancesCache.Get failed, %s failed", findFlag)
+		return &pb.FindInstancesResponse{
+			Response: proto.CreateResponse(scerr.ErrInternal, err.Error()),
+		}, err
+	}
+	if item == nil {
+		mes := fmt.Errorf("%s failed, provider does not exist", findFlag)
+		log.Errorf(mes, "FindInstancesCache.Get failed")
+		return &pb.FindInstancesResponse{
+			Response: proto.CreateResponse(scerr.ErrServiceNotExists, mes.Error()),
+		}, nil
+	}
+
+	return s.genFindResult(ctx, rev, item)
+}
+
+func (s *InstanceService) genFindResult(ctx context.Context, oldRev string, item *cache.VersionRuleCacheItem) (*pb.FindInstancesResponse, error) {
 	instances := item.Instances
-	if rev == item.Rev { //标识没有变更
+	if oldRev == item.Rev { //标识没有变更
 		instances = nil // for gRPC
 	}
 	// TODO support gRPC output context
