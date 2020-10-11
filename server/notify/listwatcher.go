@@ -34,14 +34,16 @@ type InstanceEvent struct {
 	Response *pb.WatchInstanceResponse
 }
 
+// Socked订阅者
 type InstanceEventListWatcher struct {
 	notify.Subscriber
-	Job          chan *InstanceEvent
+	Job          chan *InstanceEvent  // 有缓冲的chain
 	ListRevision int64
 	ListFunc     func() (results []*pb.WatchInstanceResponse, rev int64)
-	listCh       chan struct{}
+	listCh       chan struct{}  // 只是等待OnAccept()执行完成
 }
 
+// 设置异常并关闭subscriber  conn写入异常
 func (w *InstanceEventListWatcher) SetError(err error) {
 	w.Subscriber.SetError(err)
 	// 触发清理job
@@ -51,6 +53,7 @@ func (w *InstanceEventListWatcher) SetError(err error) {
 	}
 }
 
+// 添加到notifyService时的调用
 func (w *InstanceEventListWatcher) OnAccept() {
 	if w.Err() != nil {
 		return
@@ -59,6 +62,7 @@ func (w *InstanceEventListWatcher) OnAccept() {
 	gopool.Go(w.listAndPublishJobs)
 }
 
+// 异步发送所有ListFunc数据
 func (w *InstanceEventListWatcher) listAndPublishJobs(_ context.Context) {
 	defer close(w.listCh)
 	if w.ListFunc == nil {
@@ -71,7 +75,7 @@ func (w *InstanceEventListWatcher) listAndPublishJobs(_ context.Context) {
 	}
 }
 
-//被通知
+//被通知 notifyService的调用
 func (w *InstanceEventListWatcher) OnMessage(job notify.Event) {
 	if w.Err() != nil {
 		return
@@ -83,13 +87,13 @@ func (w *InstanceEventListWatcher) OnMessage(job notify.Event) {
 	}
 
 	select {
-	case <-w.listCh:
+	case <-w.listCh: // 等待listAndPublishJobs()的close
 	default:
 		timer := time.NewTimer(w.Timeout())
 		select {
 		case <-w.listCh:
 			timer.Stop()
-		case <-timer.C:
+		case <-timer.C:	// 未准备好
 			log.Errorf(nil,
 				"the %s listwatcher %s %s is not ready[over %s], send the event %v",
 				w.Type(), w.Group(), w.Subject(), w.Timeout(), job)
@@ -101,9 +105,10 @@ func (w *InstanceEventListWatcher) OnMessage(job notify.Event) {
 			w.Type(), w.Group(), w.Subject(), job, w.ListRevision)
 		return
 	}
-	w.sendMessage(wJob)
+	w.sendMessage(wJob) // 统一收集job
 }
 
+// 统一存放job  超时丢弃
 func (w *InstanceEventListWatcher) sendMessage(job *InstanceEvent) {
 	defer log.Recover()
 	select {
@@ -121,6 +126,7 @@ func (w *InstanceEventListWatcher) sendMessage(job *InstanceEvent) {
 	}
 }
 
+// 添加事件的超时时间
 func (w *InstanceEventListWatcher) Timeout() time.Duration {
 	return AddJobTimeout
 }

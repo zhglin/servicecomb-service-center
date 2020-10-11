@@ -88,6 +88,7 @@ func getConsumerIdsWithFilter(ctx context.Context, domainProject string, provide
 	return rf.FilterAll(ctx, consumerIds)
 }
 
+// 获取service依赖的providerServiceId
 func GetAllProviderIds(ctx context.Context, domainProject string, service *pb.MicroService) (allow []string, deny []string, _ error) {
 	providerIDsInCache, err := GetProviderIds(ctx, domainProject, service)
 	if err != nil {
@@ -99,17 +100,20 @@ func GetAllProviderIds(ctx context.Context, domainProject string, service *pb.Mi
 	}
 	allowIdx, denyIdx := 0, l
 	providerIDs := make([]string, l)
-	copyCtx := util.SetContext(util.CloneContext(ctx), util.CtxCacheOnly, "1")
+	copyCtx := util.SetContext(util.CloneContext(ctx), util.CtxCacheOnly, "1") // 只从cache读取
 	for _, providerID := range providerIDsInCache {
+		// 获取provider的rule
 		providerRules, err := GetRulesUtil(copyCtx, domainProject, providerID)
 		if err != nil {
 			return nil, nil, err
 		}
+		// 未设置rule
 		if len(providerRules) == 0 {
 			providerIDs[allowIdx] = providerID
 			allowIdx++
 			continue
 		}
+		// 校验rule
 		rf.ProviderRules = providerRules
 		ok, err := rf.Filter(ctx, service.ServiceId)
 		if err != nil {

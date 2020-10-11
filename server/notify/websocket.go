@@ -29,28 +29,31 @@ import (
 	"time"
 )
 
+// webSocket notify
 type WebSocket struct {
 	ctx    context.Context
 	ticker *time.Ticker
 	conn   *websocket.Conn
 	// watcher subscribe the notification service event
 	watcher         *InstanceEventListWatcher
-	needPingWatcher bool
-	free            chan struct{}
+	needPingWatcher bool			// 标记
+	free            chan struct{}  	// 标记已就绪 可以处理事件
 	closed          chan struct{}
 }
 
+// 初始化webSocket
 func (wh *WebSocket) Init() error {
 	wh.ticker = time.NewTicker(HeartbeatInterval)
 	wh.needPingWatcher = true
 	wh.free = make(chan struct{}, 1)
 	wh.closed = make(chan struct{})
 
+	// 已就绪
 	wh.SetReady()
 
 	remoteAddr := wh.conn.RemoteAddr().String()
 
-	// put in notification service queue
+	// put in notification service queue 添加到notifyService中
 	if err := GetNotifyCenter().AddSubscriber(wh.watcher); err != nil {
 		err = fmt.Errorf("establish[%s] websocket watch failed: notify service error, %s",
 			remoteAddr, err.Error())
@@ -63,7 +66,7 @@ func (wh *WebSocket) Init() error {
 		return err
 	}
 
-	// put in publisher queue
+	// put in publisher queue  添加webSocked
 	publisher.Accept(wh)
 
 	log.Debugf("start watching instance status, watcher[%s], subject: %s, group: %s",
@@ -94,6 +97,7 @@ func (wh *WebSocket) heartbeat(messageType int) error {
 	return nil
 }
 
+// 设置链接
 func (wh *WebSocket) HandleWatchWebSocketControlMessage() {
 	remoteAddr := wh.conn.RemoteAddr().String()
 	// PING
@@ -135,11 +139,13 @@ func (wh *WebSocket) HandleWatchWebSocketControlMessage() {
 	if err != nil {
 		log.Error("", err)
 	}
+
+	// 一直执行
 	for {
 		_, _, err := wh.conn.ReadMessage()
 		if err != nil {
 			// client close or conn broken
-			wh.watcher.SetError(err)
+			wh.watcher.SetError(err) // 链接异常设置watcher异常信息
 			return
 		}
 	}
@@ -160,18 +166,19 @@ func (wh *WebSocket) sendClose(code int, text string) error {
 	return nil
 }
 
-// Pick will be called by publisher
+// Pick will be called by publisher 有没有事件需要通知
 func (wh *WebSocket) Pick() interface{} {
 	select {
 	case <-wh.Ready():
+		// watch异常
 		if wh.watcher.Err() != nil {
 			return wh.watcher.Err()
 		}
 
 		select {
-		case t := <-wh.ticker.C:
+		case t := <-wh.ticker.C: // 到时间
 			return t
-		case j := <-wh.watcher.Job:
+		case j := <-wh.watcher.Job: // 事件
 			if j == nil {
 				return fmt.Errorf("server shutdown")
 			}
@@ -188,7 +195,7 @@ func (wh *WebSocket) Pick() interface{} {
 
 // HandleWatchWebSocketJob will be called if Pick() returns not nil
 func (wh *WebSocket) HandleWatchWebSocketJob(o interface{}) {
-	defer wh.SetReady()
+	defer wh.SetReady() // 下次处理
 
 	var (
 		job        *InstanceEvent
@@ -202,13 +209,14 @@ func (wh *WebSocket) HandleWatchWebSocketJob(o interface{}) {
 			remoteAddr, wh.watcher.Subject(), wh.watcher.Group())
 
 		message = util.StringToBytesWithNoCopy(fmt.Sprintf("watcher catch an err: %s", o.Error()))
-	case time.Time:
+	case time.Time:// 30秒超时
 		domainProject := util.ParseDomainProject(wh.ctx)
 		if !serviceUtil.ServiceExist(wh.ctx, domainProject, wh.watcher.Group()) {
 			message = util.StringToBytesWithNoCopy("Service does not exit.")
 			break
 		}
 
+		// init函数执行完 还没有执行HandleWatchWebSocketControlMessage
 		if !wh.needPingWatcher {
 			return
 		}
@@ -222,7 +230,7 @@ func (wh *WebSocket) HandleWatchWebSocketJob(o interface{}) {
 		log.Debugf("send 'Ping' message to watcher[%s], subject: %s, group: %s",
 			remoteAddr, wh.watcher.Subject(), wh.watcher.Group())
 		return
-	case *InstanceEvent:
+	case *InstanceEvent: // 事件
 		resp := o.Response
 
 		providerFlag := fmt.Sprintf("%s/%s/%s", resp.Key.AppId, resp.Key.ServiceName, resp.Key.Version)
@@ -248,11 +256,12 @@ func (wh *WebSocket) HandleWatchWebSocketJob(o interface{}) {
 	}
 
 	select {
-	case <-wh.closed:
+	case <-wh.closed: // 已关闭
 		return
 	default:
 	}
 
+	// conn写入事件
 	err := wh.WriteMessage(message)
 	if job != nil {
 		ReportPublishCompleted(job, err)
@@ -271,10 +280,12 @@ func (wh *WebSocket) WriteMessage(message []byte) error {
 	return wh.conn.WriteMessage(websocket.TextMessage, message)
 }
 
+// 返回是否已就绪
 func (wh *WebSocket) Ready() <-chan struct{} {
 	return wh.free
 }
 
+// 写入已就绪
 func (wh *WebSocket) SetReady() {
 	select {
 	case wh.free <- struct{}{}:
@@ -286,6 +297,7 @@ func (wh *WebSocket) Stop() {
 	close(wh.closed)
 }
 
+// 创建webSocket
 func DoWebSocketListAndWatch(ctx context.Context, serviceID string, f func() ([]*pb.WatchInstanceResponse, int64), conn *websocket.Conn) {
 	domainProject := util.ParseDomainProject(ctx)
 	domain := util.ParseDomain(ctx)
@@ -296,17 +308,19 @@ func DoWebSocketListAndWatch(ctx context.Context, serviceID string, f func() ([]
 	}
 
 	ReportSubscriber(domain, Websocket, 1)
-	process(socket)
+	process(socket) // 执行
 	ReportSubscriber(domain, Websocket, -1)
 }
 
 func process(socket *WebSocket) {
-	if err := socket.Init(); err != nil {
+	if err := socket.Init(); err != nil { // 初始化
 		return
 	}
 
+	// 阻塞在这里
 	socket.HandleWatchWebSocketControlMessage()
 
+	// 关闭
 	socket.Stop()
 }
 

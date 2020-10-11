@@ -26,8 +26,8 @@ import (
 )
 
 type Validator struct {
-	rules map[string]*Rule
-	subs  map[string]*Validator
+	rules map[string]*Rule      // 字段对应的rule规则
+	subs  map[string]*Validator // 子结构对应的validator
 	once  sync.Once
 }
 
@@ -45,6 +45,7 @@ func (v *Validator) GetRule(name string) *Rule {
 	return v.rules[name]
 }
 
+// 添加校验规则 字段名
 func (v *Validator) AddRule(name string, rule *Rule) {
 	if v.rules == nil {
 		v.rules = make(map[string](*Rule))
@@ -72,6 +73,7 @@ func (v *Validator) GetSub(name string) *Validator {
 	return v.subs[name]
 }
 
+// 添加子结构校验规则
 func (v *Validator) AddSub(name string, s *Validator) {
 	if v.subs == nil {
 		v.subs = make(map[string](*Validator))
@@ -83,6 +85,7 @@ func (v *Validator) GetSubs() map[string](*Validator) {
 	return v.subs
 }
 
+// 批量添加子结构
 func (v *Validator) AddSubs(in map[string](*Validator)) {
 	if len(in) == 0 {
 		return
@@ -92,17 +95,18 @@ func (v *Validator) AddSubs(in map[string](*Validator)) {
 	}
 }
 
+// 校验
 func (v *Validator) Validate(s interface{}) error {
 	sv := reflect.ValueOf(s)
 	k := sv.Kind()
 	switch k {
-	case reflect.Ptr:
+	case reflect.Ptr: // 解引用
 		if !sv.IsNil() {
 			return v.Validate(sv.Elem().Interface())
 		}
 		return errors.New("invalid nil pointer")
 	case reflect.Struct:
-	default:
+	default: // 非struct类型
 		return fmt.Errorf("not support validate type '%s'", k)
 	}
 
@@ -110,15 +114,17 @@ func (v *Validator) Validate(s interface{}) error {
 	for i, l := 0, sv.NumField(); i < l; i++ {
 		field := sv.Field(i)
 		fieldName := st.Fields[i].Name
-		rule, ok := v.rules[fieldName]
-		subV, sub := v.subs[fieldName]
+		rule, ok := v.rules[fieldName] // 字段的规则
+		subV, sub := v.subs[fieldName] // 字段的子结构
 
+		// 字段是指针 解引用
 		fi := field.Interface()
 		if field.Kind() == reflect.Ptr && !field.IsNil() {
 			fi = field.Elem().Interface()
 			field = reflect.ValueOf(fi)
 		}
 
+		// 存在对应的字段校验规则
 		if ok {
 			// check current rule
 			// if pointer, check it's a nil pointer or not
@@ -133,6 +139,7 @@ func (v *Validator) Validate(s interface{}) error {
 			}
 		}
 
+		// 存在子结构
 		if sub {
 			// check sub rule
 			// do not support sub type is not pointer or struct

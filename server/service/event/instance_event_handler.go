@@ -62,7 +62,7 @@ func (h *InstanceEventHandler) OnEvent(evt discovery.KvEvent) {
 	switch action {
 	case pb.EVT_INIT:
 		metrics.ReportInstances(domainName, count)
-		// 本地cache不存在 先生成cache再处理event
+		// 本地cache不存在
 		ms := serviceUtil.GetServiceFromCache(domainProject, providerID)
 		if ms == nil {
 			log.Warnf("caught [%s] instance[%s/%s] event, endpoints %v, get cached provider's file failed",
@@ -127,7 +127,7 @@ func NewInstanceEventHandler() *InstanceEventHandler {
 	return &InstanceEventHandler{}
 }
 
-// 通知
+// 通知consumer端
 func PublishInstanceEvent(evt discovery.KvEvent, domainProject string, serviceKey *pb.MicroServiceKey, subscribers []string) {
 	// 删除对应的cache
 	defer cache.FindInstances.Remove(serviceKey)

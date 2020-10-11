@@ -147,6 +147,7 @@ func DeleteServiceAllInstances(ctx context.Context, serviceID string) error {
 	return nil
 }
 
+// 获取比cache中rev更大的providerService以及instance
 func QueryAllProvidersInstances(ctx context.Context, selfServiceID string) (results []*pb.WatchInstanceResponse, rev int64) {
 	results = []*pb.WatchInstanceResponse{}
 
@@ -161,25 +162,31 @@ func QueryAllProvidersInstances(ctx context.Context, selfServiceID string) (resu
 		log.Errorf(nil, "service[%s] does not exist", selfServiceID)
 		return
 	}
+
+	// 获取所有有rule权限的providerId
 	providerIDs, _, err := GetAllProviderIds(ctx, domainProject, service)
 	if err != nil {
 		log.Errorf(err, "get service[%s]'s providerIDs failed", selfServiceID)
 		return
 	}
 
+	// cache中最后的etcd版本号
 	rev = backend.Revision()
 
 	for _, providerID := range providerIDs {
+		// 根据rev获取service信息
 		service, err := GetServiceWithRev(ctx, domainProject, providerID, rev)
 		if err != nil {
 			log.Errorf(err, "get service[%s]'s provider[%s] file with revision %d failed",
 				selfServiceID, providerID, rev)
 			return
 		}
+		// 没变化
 		if service == nil {
 			continue
 		}
 
+		// 变更的instance
 		kvs, err := queryServiceInstancesKvs(ctx, providerID, rev)
 		if err != nil {
 			log.Errorf(err, "get service[%s]'s provider[%s] instances with revision %d failed",
@@ -204,6 +211,7 @@ func QueryAllProvidersInstances(ctx context.Context, selfServiceID string) (resu
 	return
 }
 
+// 根据rev获取instance信息
 func queryServiceInstancesKvs(ctx context.Context, serviceID string, rev int64) ([]*discovery.KeyValue, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	key := apt.GenerateInstanceKey(domainProject, serviceID, "")

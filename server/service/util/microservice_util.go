@@ -37,6 +37,8 @@ import (
 /*
 	get Service by service id
 */
+// 根据版本号查询service信息 cache不支持rev
+// 读key的时候指定一个版本号，服务端保证返回比这个版本号更新的数据，但不保证返回最新的数据
 func GetServiceWithRev(ctx context.Context, domain string, id string, rev int64) (*pb.MicroService, error) {
 	key := apt.GenerateServiceKey(domain, id)
 	serviceResp, err := backend.Store().Service().Search(ctx,

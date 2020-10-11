@@ -19,6 +19,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/notify"
 )
 
+// instance实例类型
 var INSTANCE = notify.RegisterType("INSTANCE", InstanceEventQueueSize)
 var notifyService *notify.Service
 
@@ -26,7 +27,7 @@ func init() {
 	notifyService = notify.NewNotifyService()
 }
 
-// notify服务
+// notify服务  socket
 func GetNotifyCenter() *notify.Service {
 	return notifyService
 }

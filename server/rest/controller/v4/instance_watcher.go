@@ -37,6 +37,7 @@ func (s *WatchService) URLPatterns() []rest.Route {
 	}
 }
 
+// 转换成webSocked协议
 func upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 	var upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -51,6 +52,7 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 }
 
 func (s *WatchService) Watch(w http.ResponseWriter, r *http.Request) {
+	// 转换成websocket
 	conn, err := upgrade(w, r)
 	if err != nil {
 		return

@@ -24,11 +24,12 @@ import (
 	"unicode/utf8"
 )
 
+// 字段校验规则
 type Rule struct {
-	Min    int
-	Max    int
-	Regexp Method
-	Hide   bool // if true, do not print the value when return invalid result
+	Min    int	// 最小长度
+	Max    int  // 最大程度
+	Regexp Method // 字符串的匹配规则
+	Hide   bool // if true, do not print the value when return invalid result 是否展示字段值
 }
 
 func (v *Rule) String() string {
@@ -46,9 +47,10 @@ func (v *Rule) String() string {
 	return "{" + util.StringJoin(s, ", ") + "}"
 }
 
+// 字段校验
 func (v *Rule) Match(s interface{}) (ok bool, invalidValue interface{}) {
 	invalidValue = s
-	var invalid bool
+	var invalid bool  // 是否校验失败
 	sv := reflect.ValueOf(s)
 	k := sv.Kind()
 	if v.Min > 0 && !invalid {
@@ -91,13 +93,15 @@ func (v *Rule) Match(s interface{}) (ok bool, invalidValue interface{}) {
 			itemV := Rule{
 				Regexp: v.Regexp,
 			}
-			keys := sv.MapKeys()
+			keys := sv.MapKeys() // map的值
 			for _, key := range keys {
+				// 递归
 				if ok, v := itemV.Match(key.Interface()); !ok {
 					invalid = true
 					invalidValue = v
 					break
 				}
+				// 校验map的键
 				if ok, v := itemV.Match(sv.MapIndex(key).Interface()); !ok {
 					invalid = true
 					invalidValue = v
@@ -108,6 +112,7 @@ func (v *Rule) Match(s interface{}) (ok bool, invalidValue interface{}) {
 			itemV := Rule{
 				Regexp: v.Regexp,
 			}
+			// 校验数组的值
 			for i, l := 0, sv.Len(); i < l; i++ {
 				if ok, v := itemV.Match(sv.Index(i).Interface()); !ok {
 					invalid = true
@@ -116,6 +121,7 @@ func (v *Rule) Match(s interface{}) (ok bool, invalidValue interface{}) {
 				}
 			}
 		default:
+			// 只校验字符串
 			str, ok := s.(string)
 			if ok {
 				invalid = !v.Regexp.MatchString(str)

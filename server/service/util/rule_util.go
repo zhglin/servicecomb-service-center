@@ -97,7 +97,7 @@ func GetRulesUtil(ctx context.Context, domainProject string, serviceID string) (
 		"",
 	}, "/")
 
-	//
+	// 获取所有rule
 	opts := append(FromContext(ctx), registry.WithStrKey(key), registry.WithPrefix())
 	resp, err := backend.Store().Rule().Search(ctx, opts...)
 	if err != nil {
