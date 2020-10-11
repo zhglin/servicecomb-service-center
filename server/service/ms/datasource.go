@@ -20,20 +20,24 @@ import (
 	pb "github.com/apache/servicecomb-service-center/pkg/registry"
 )
 
+// Attention: request validation must be finished before the following interface being invoked!!!
 type DataSource interface {
-	RegisterService(ctx context.Context, service *pb.CreateServiceRequest) (*pb.CreateServiceResponse, error)
-	GetService(ctx context.Context, service *pb.GetServiceRequest)
-	UpdateService(ctx context.Context, service *pb.UpdateServicePropsRequest)
-	UnregisterService(ctx context.Context, service *pb.DeleteServiceRequest)
+	RegisterService(ctx context.Context, request *pb.CreateServiceRequest) (*pb.CreateServiceResponse, error)
+	GetServices(ctx context.Context, request *pb.GetServicesRequest) (*pb.GetServicesResponse, error)
+	GetService(ctx context.Context, request *pb.GetServiceRequest) (*pb.GetServiceResponse, error)
+	ExistService(ctx context.Context, request *pb.GetExistenceRequest) (*pb.GetExistenceResponse, error)
+	UpdateService(ctx context.Context, request *pb.UpdateServicePropsRequest) (*pb.UpdateServicePropsResponse, error)
+	UnregisterService(ctx context.Context, request *pb.DeleteServiceRequest) (*pb.DeleteServiceResponse, error)
 
 	RegisterInstance()
 	SearchInstance()
 	UpdateInstance()
 	UnRegisterInstance()
 
-	AddSchema()
+	ModifySchemas(ctx context.Context, request *pb.ModifySchemasRequest) (*pb.ModifySchemasResponse, error)
+	ModifySchema(ctx context.Context, request *pb.ModifySchemaRequest) (*pb.ModifySchemaResponse, error)
+	ExistSchema(ctx context.Context, request *pb.GetExistenceRequest) (*pb.GetExistenceResponse, error)
 	GetSchema()
-	UpdateSchema()
 	DeleteSchema()
 
 	AddTag()

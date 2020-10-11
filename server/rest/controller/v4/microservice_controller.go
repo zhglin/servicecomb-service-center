@@ -116,14 +116,24 @@ func (s *MicroServiceService) Unregister(w http.ResponseWriter, r *http.Request)
 		ServiceId: serviceID,
 		Force:     b,
 	}
-	resp, _ := core.ServiceAPI.Delete(r.Context(), request)
+	resp, err := core.ServiceAPI.Delete(r.Context(), request)
+	if err != nil {
+		log.Errorf(err, "delete service[%s] failed", serviceID)
+		controller.WriteError(w, scerr.ErrInternal, "delete service failed")
+		return
+	}
 	controller.WriteResponse(w, resp.Response, nil)
 }
 
 // 获取domainProject下的所有service
 func (s *MicroServiceService) GetServices(w http.ResponseWriter, r *http.Request) {
 	request := &pb.GetServicesRequest{}
-	resp, _ := core.ServiceAPI.GetServices(r.Context(), request)
+	resp, err := core.ServiceAPI.GetServices(r.Context(), request)
+	if err != nil {
+		log.Errorf(err, "get services failed")
+		controller.WriteError(w, scerr.ErrInternal, err.Error())
+		return
+	}
 	respInternal := resp.Response
 	resp.Response = nil
 	controller.WriteResponse(w, respInternal, resp)
@@ -141,7 +151,12 @@ func (s *MicroServiceService) GetExistence(w http.ResponseWriter, r *http.Reques
 		ServiceId:   query.Get("serviceId"),
 		SchemaId:    query.Get("schemaId"),
 	}
-	resp, _ := core.ServiceAPI.Exist(r.Context(), request)
+	resp, err := core.ServiceAPI.Exist(r.Context(), request)
+	if err != nil {
+		log.Errorf(err, "check service existence failed")
+		controller.WriteError(w, scerr.ErrInternal, "check service existence failed")
+		return
+	}
 	w.Header().Add("X-Schema-Summary", resp.Summary)
 	respInternal := resp.Response
 	resp.Response = nil
@@ -154,7 +169,12 @@ func (s *MicroServiceService) GetServiceOne(w http.ResponseWriter, r *http.Reque
 	request := &pb.GetServiceRequest{
 		ServiceId: r.URL.Query().Get(":serviceId"),
 	}
-	resp, _ := core.ServiceAPI.GetOne(r.Context(), request)
+	resp, err := core.ServiceAPI.GetOne(r.Context(), request)
+	if err != nil {
+		log.Errorf(err, "get service[%s] failed", request.ServiceId)
+		controller.WriteError(w, scerr.ErrInternal, "get service failed")
+		return
+	}
 	respInternal := resp.Response
 	resp.Response = nil
 	controller.WriteResponse(w, respInternal, resp)
@@ -180,8 +200,8 @@ func (s *MicroServiceService) UnregisterServices(w http.ResponseWriter, r *http.
 
 	resp, err := core.ServiceAPI.DeleteServices(r.Context(), request)
 	if err != nil {
-		log.Errorf(err, "delete service failed")
-		controller.WriteError(w, scerr.ErrInternal, "delete service failed")
+		log.Errorf(err, "delete services failed")
+		controller.WriteError(w, scerr.ErrInternal, "delete services failed")
 		return
 	}
 	respInternal := resp.Response
