@@ -26,11 +26,13 @@ type MicroServiceInstance struct {
 	// 机器的hostName
 	HostName   string            `protobuf:"bytes,4,opt,name=hostName" json:"hostName,omitempty"`
 	Status     string            `protobuf:"bytes,5,opt,name=status" json:"status,omitempty"`
+	// 业务上用instance的过滤
 	Properties map[string]string `protobuf:"bytes,6,rep,name=properties" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// 续租信息
 	HealthCheck *HealthCheck `protobuf:"bytes,7,opt,name=healthCheck" json:"healthCheck,omitempty"`
 	// 创建时间
 	Timestamp      string          `protobuf:"bytes,8,opt,name=timestamp" json:"timestamp,omitempty"`
+	// 部署的区域信息
 	DataCenterInfo *DataCenterInfo `protobuf:"bytes,9,opt,name=dataCenterInfo" json:"dataCenterInfo,omitempty"`
 	// 修改时间
 	ModTimestamp string `protobuf:"bytes,10,opt,name=modTimestamp" json:"modTimestamp,omitempty"`
